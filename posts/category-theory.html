@@ -1,0 +1,68 @@
+title: Category Theory
+date: [2020-04-07 Mon 16:00:00]
+tags: theory,category
+---
+<p>Category Theory에 대한 이해</p>
+
+<h1 id="table-of-contents">Table of Contents</h1>
+
+<ol>
+  <li><a href="#org8de816b">Category : the essence of composition</a></li>
+  <li><a href="#org4b5c7e0">Types and Functions</a>
+    <ol>
+      <li><a href="#org7ed05f5">Types are about composbility</a></li>
+      <li><a href="#org10dd9ae">pure and dirty functions</a></li>
+      <li><a href="#org015612e">example of types</a></li>
+    </ol>
+  </li>
+  <li><a href="#orge839f11">Category Great and Small</a></li>
+</ol>
+
+<p>Category Theory for Programmers, written by Bartosz Milewski</p>
+
+<p><a id="org8de816b"></a></p>
+
+<h1 id="category--the-essence-of-composition">Category : the essence of composition</h1>
+
+<p>Category theory is about composing arrows.</p>
+
+<p><a id="org4b5c7e0"></a></p>
+
+<h1 id="types-and-functions">Types and Functions</h1>
+
+<p><a id="org7ed05f5"></a></p>
+
+<h2 id="types-are-about-composbility">Types are about composbility</h2>
+
+<p>operational semantics vs. denotational semantics</p>
+
+<p>A factorial function has an obvious mathematical denotation. An astute reader
+might ask: What’s the mathematical model for reading a character from
+the keyboard or sending a packet across the network? For the longest
+time that would have been an awkward question leading to a rather convoluted explanation. It seemed like denotational semantics wasn’t the
+best fit for a considerable number of important tasks that were essential
+for writing useful programs, and which could be easily tackled by operational semantics. The breakthrough came from category theory. Eugenio Moggi discovered that computational effect can be mapped to monads. This turned out to be an important observation that not only gave
+denotational semantics a new lease on life and made pure functional
+programs more usable, but also shed new light on traditional programming.</p>
+
+<p><a id="org10dd9ae"></a></p>
+
+<h2 id="pure-and-dirty-functions">pure and dirty functions</h2>
+
+<p><a id="org015612e"></a></p>
+
+<h2 id="example-of-types">example of types</h2>
+
+<p>empty set type is called “bottom” in math.
+how to represent that type? nothing meaningful in programming language but in math.</p>
+
+<p>single-elemnt set type is called “singlton”, for example, void type.
+f :: void -&gt; integer, f :: integer -&gt; void
+not meaningful in programming but possible in math.</p>
+
+<p>two-element set type, for example, bool type is that. True or False. Predicates
+is one of fucntions returning boolean type.</p>
+
+<p><a id="orge839f11"></a></p>
+
+<h1 id="category-great-and-small">Category Great and Small</h1>

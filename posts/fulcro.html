@@ -1,0 +1,44 @@
+title: Fulcro Clojure(Script)
+date: [2020-01-01 Mon 00:00:00]
+tags: fulcro,clojure,clojurescript
+---
+<p> what is Fulcro? </p>
+<p></p>
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#orgc198d4a">1. Reference</a></li>
+<li><a href="#org985513c">2. 시작하며 &#x2026;</a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orgc198d4a" class="outline-2">
+<h2 id="orgc198d4a"><span class="section-number-2">1.</span> Reference</h2>
+<div class="outline-text-2" id="text-1">
+<ul class="org-ul">
+<li>Fulcro GuideBook: <a href="https://book.fulcrologic.com/#_fulcro_from_10000_feet">https://book.fulcrologic.com/#_fulcro_from_10000_feet</a></li>
+<li>Fulcro RAD: <a href="https://book.fulcrologic.com/RAD.html#_introduction">https://book.fulcrologic.com/RAD.html#_introduction</a></li>
+<li>React Basic: <a href="https://reactjs.org/docs/hello-world.html">https://reactjs.org/docs/hello-world.html</a></li>
+<li>React Advanced: <a href="https://reactjs.org/docs/accessibility.html">https://reactjs.org/docs/accessibility.html</a></li>
+<li>React Hooks: <a href="https://reactjs.org/docs/hooks-intro.html">https://reactjs.org/docs/hooks-intro.html</a></li>
+<li>Dates in Clojure: Making Sense of the Mess - <a href="https://lambdaisland.com/blog/2017-07-26-dates-in-clojure-making-sense-of-the-mess">https://lambdaisland.com/blog/2017-07-26-dates-in-clojure-making-sense-of-the-mess</a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org985513c" class="outline-2">
+<h2 id="org985513c"><span class="section-number-2">2.</span> 시작하며 &#x2026;</h2>
+<div class="outline-text-2" id="text-2">
+<ul class="org-ul">
+<li>Fulco 컴포넌트 모델은 React 컴포넌트를 근간으로 하여 컴포넌트의 속성값과 상태값을 어플리케이션 DB에서 쿼리 및 트랜잭션하여 관리한다.
+컴포넌트 정의시 어플리케이션 DB에 저장/검색될 떄 기준이되는 Ident 및 쿼리문을 명시하는 것이 특징이다.
+어플리케이션 DB는 Datascript와 같은 로컬 DB이며 컴포넌트의 Ident 기준으로 정규화되어 있다.
+Pathom EQL Parser를 갖춘 백앤드 서버를 활용하여, 로컬 DB에 대한 쿼리와 동일하게 리모트쿼리를 수행하여 데이터를 서버로 부터 로드한다.
+EQL 쿼리를 대응하기 위해서 Pathom Resolver가 서버에 구현되어야 한다.
+어플리케이션 DB에 대한 업데이트는 상태변경을 의미하며, 변경된 상태값에 따라서 연관된 컴포넌트가 Re-render된다.
+트랜잭션 처리 구조를 제공하여, 상태변경을 위한 mutation을 정의하고 이를 트랜젹션에 밀어 넣으면 Fulcro Transaction System이 처리를 해 준다.</li>
+</ul>
+</div>
+</div>

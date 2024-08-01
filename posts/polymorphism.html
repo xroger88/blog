@@ -1,0 +1,235 @@
+title: Clojure Polymorphism
+date: [2020-04-06 Mon 13:00:00]
+tags: clojure,polymorphism,multimethod
+---
+<p> What type of polymorphism implemened in Clojure.</p>
+<p></p>
+<h1>Basic References</h1>
+<ul>
+  <li><a href="https://www.braveclojure.com/introduction/">CLOJURE for the BRAVE and TRUE</a> (2015년) authored by Daniel Higginbotham :
+    클로저 개발에 꼭 필요한 것들을 쉽게 자세히 설명해 주는 책! (필독 강추)</li>
+  <li><b>Programming Clojure</b> (2918년) authored by Alex Miller with Stuart Halloway and Aaron
+    Bedra : 클로저 개발에 크게 기여한 저자들이 작성한 기본 입문서 (필독
+    강추)</li>
+  <li><b>Geting Clojure</b> (2018년) authored by Russ Olsen : In wild, Stay out of trouble 등
+    저자의 경험에서 우러나는 실질적인 부분에 대하여 쉽게 설명이 잘 된 책으로 최근
+    출판된 입문서에 해당함 (필독 강추)</li>
+  <li><b>Elements of Clojure</b> by Zachary Tellman : 클로저 기본 네이밍 철학, 이디엄(컨벤션), 간접화(indirection), 조합성에 대한 통찰을 주는 책! (필독 강추)</li>
+</ul>
+<h1>Polymorphism 이란?</h1>
+<ul>
+  <li>다형성(polymorphism)에 대한 정의는 현대 언어에서 중요하게 다루어 진다.
+    왜냐하면 다형성을 지원하는 것은 확장 가능하고 유연한 시스템을 만드는데 있어서
+    필요하기 때문이다. 폴리모르피즘(어려운 단어)이라고 하는 다형성은 사전적으로는
+    단순히 다양한 형태로 변화될 수 있는 것을 의미하는 반면, 프로그래밍 세계의 경우
+    의미가 부여된 하나의 기호(함수)가 다양한 환경(조건)에서 그 의미에 맞게 다양한 실체(구현)로
+    변화되어 적용이 가능한 것(상태)을 의미한다.</li>
+  <li>클로저 공식 사이트[fn:1]에서 클로저를 소개하면서 다형성에 대하여 다음과 같이
+    기술한다: &#8220;다형성은 좋은 것이다. 스위치 구문 및 구조적인 매칭 등은 이해하기
+    어려운 코드를 양산하다. 다형성은 확장가능하며 유연한 시스템(코드)를 만들 수
+    있게 도와준다. 클로저 멀티메소드는 객체지향 및 타입으로 부터 다형성을 분리해
+    낸다. 다중 텍사노미(taxonomies)를 지원하며, 정적/동적 또는 외부속성,
+    메타데이타를 통해 분기(dispatch)한다.&#8221;</li>
+</ul>
+<p>[fn:1] https://clojure.org</p>
+<ul>
+  <li>다형성을 직관적으로 받아 들이기는 어렵다. 클로저에서 제공하는 멀티메소드를
+    만들어서 사용해 보면 대충 다형성이란 어떤 것인지 알 수 있을 것이다.</li>
+  <li>클로저에서 추상화를 하는 주요 방법은 하나의 동작에 부여된 이름(즉 메소드 혹은
+    함수)에 하나 이상의 동작 알고리즘을 연관짓는 것이다. 예를들면, 리스트에 대하여
+    <code>conj</code> 동작을 수행하는 알고리즘은 벡터에 대하여 동일한 동작을 수행하는
+    알고리즘과 다르지만 같은 동작의 이름으로 통일되게 불리우는 것이 좋다. 왜냐하면
+    그러한 동작 알고리즘들은 같은 개념을 구현한 것들이기에 같은 이름으로 불리우는
+    것이 합당하다. 즉 <code>conj</code> 동작은 리스트가 되었건 벡터가 되었건 해당 데이터
+    구조에 하나의 요소(아이템)을 추가하는 것을 의미한다.</li>
+</ul>
+<h1>Sequences</h1>
+<ul>
+  <li>클로저 언어에서 중요한 개념중에 하나는 시퀀스(sequence)이다. 시퀀스는 말그대로
+    순서개념, 즉 데이터 아이템를 일렬로 나열할 수 있는 데이터 구조를 의미한다.
+    클로저의 기본 데이터 타입인 리스트(list), 벡터(vector), 맵(map), 셋(set) 등은
+    내부 구조는 다르지만 <code>seq</code> 함수를 통해서 시퀀스로 변환이 된다. 맵의 경우
+    시퀀스로 변환될 경우 key와 value로 구성된 벡터 아이템의 시퀀스 형태가 된다.</li>
+  <li>클로저는 어떤 콜렉션 타입이 입력되더다도 이를 시퀀스로 변환하여 데이터를 처리하고 결과를
+    시퀀스 또는 특정 값으로 반환하는 다양한 함수들을 지원한다. 예들들면, <code>first</code> 는
+    입력이 리스트이건, 벡터이건, 맵 또는 셋이건 이를 <code>seq</code> 함수를 통해서
+    시퀀스로 변환하고 시퀀스의 첫번째 아이템을 결과로 준다. 여기서 맵과 셋에
+    대해서 어떤 아이템이 첫번째가 될 것인가는 명시적으로 정할 수는 없지만
+    일관성을 보장한다. <code>next</code>, <code>rest</code> 의 경우 모두 시퀀스 함수로서 첫번째
+    아이템을 제외한 나머지를 시퀀스로 출력한다. <code>cons</code> 는 임이의
+    콜렉션에 아이템을 추가하는데, 콜렉션을 시퀀스로 변환하고 첫번째 자리에
+    아이템을 추가한 시퀀스 결과를 반환한다. <code>cons</code> (construct) 와 <code>conj</code>
+    (conjuntion) 는 유사한 기능을 제공하면서도 다른 점이 있다. <code>cons</code> 는 시퀀스 함수이며, <code>conj</code> 는 입력
+    콜렉션을 시퀀스로 변환하지 않고 해당 데이타 구조를 유지하면서 새로운 아이템을
+    추가한다. 벡터에 <code>conj</code> 할 경우 새로운 아이템이 맨 뒤에 추가되는 것은 벡터의
+    데이타 구조를 유지하면서 추가하기 때문에 그러하다.</li>
+  <li>클로저 러이브러리는 다양한 시퀀스 함수를 제공한다. <code>map</code> , <code>filter</code> 를
+    포함하여 <code>partition</code> 등이 대표적인 함수들이다. 공통적인 특징은 입력되는 콜렉션에 따라서
+    세부적인 구현을 다르게 할 필요 없이 시퀀스로 변환하여 함수기능을
+    구현하다는 것이다. 이러한 시퀀스 함수는 다양한 콜렉션에 대하여 시퀀스 추상화를
+    제공한다. 시퀀스 추상화는 콜로저 언어에 있어서 기본적이기에 활용의 폭이 넓다.
+    시퀀스 추상화를 통해서 클로저 코드를 읽기 쉽고 간결하게 작성할 수 있으며, 더
+    나아가서 <code>lazy sequence</code> 개념으로 확장되면서 유용성이 더 크다.</li>
+</ul>
+<h1>Multimethods</h1>
+<ul>
+  <li>멀티메소드는 코드에 다형성을 도입하기 위한 직접적이면서도 유연한 방식을
+    제공한다. <code>defmulti</code> 는 멀티메소드의 디스페칭(dispatching) 함수를 정의한다.
+    디스페칭 함수는 멀티메소드의 입력인자(arguments)에 대하여 디스페칭값을
+    반환한다. <code>multimethod</code> 는 같은 이름으로 다수가 정의될 수 있다. 멀티메소드
+    호출시 디스페칭 함수에 입력인자를 적용하여 디스페칭값을 얻고 이를 이용하여
+    멀티메소드를 선택하여 호출하는 식으로 동작한다. 디스페칭값과 일치하는
+    멀티메스드가 정의되지 않을 경우 컴파일 에러가 난다. 만약에 <code>:default</code>
+    디스페칭값으로 정의된 메소드가 있을 경우 그 메소드가 호출된다.</li>
+  <li>디스페칭값은 어떤 값도 가능하지만 보통 키워드가 많이 사용된다. 키워드로
+    적용해야할 메소드를 구분하는 것이 일반적인데 동일 메소드 이름으로 분류(문맥)에
+    따라서 구현내용이 달라지는 측면에서 키워드로 분류를 명시적으로 하는 것이
+    직관적이고 코드를 이해하기 쉽기 때문이다.</li>
+</ul>
+<h1>Protocols</h1>
+<ul>
+  <li>멀티메소드를 이용하여 타입(type) 디스페치를 수행하는 것이 가능할지라도, 타입
+    디스페치를 위해서는 프로토콜(protocols) 사용이 더 적합하다. 클로저는
+    멀티메소드 보다 더 효율적이며 간결한 구현이 가능하도록 타입 디스페치용
+    프로토콜을 제공한다. 멀티메소드는 단지 하나의 다형성이 존재하는 동작이지만
+    프로토콜은 하나 이상의 다형적 동작들의 묶음(collection)이다. 프로토콜은 첫번째
+    인자의 타입에 따라서 디스페치한다. 어떻게 프로토콜을 정의하는지 이해하기
+    위하여, 다음과 같은 예[fn:2]가 도움이 된다. 프로토콜 정의는 자바의 인터페이스
+    정의와 유사하며 <code>defprotocol</code> 로 추상화된 인터페이스 함수를 정의하고, 이러한
+    프토토콜을 필요한 타입(혹은 객체)에 <code>extend-type</code> 정의하여 구현한다.
+    또한, <code>extend-protocol</code> 을 정의하여 한 곳에서 여러가지 타입에 프로토콜을 구현할 수 있다.</li>
+</ul>
+<p>[fn:2] clojure for the brave and true 책에서 발취됨</p>
+<pre class="src" lang="clojure">
+<figure class="highlight"><pre><code class="language-clojure" data-lang="clojure"><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="n">data-psychology</span><span class="p">)</span><span class="w">
+</span><span class="p">(</span><span class="nf">defprotocol</span><span class="w"> </span><span class="n">Psychodynamics</span><span class="w">
+  </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;Plumb the inner depths of your data types&amp;quot;</span><span class="w">
+  </span><span class="p">(</span><span class="nf">thoughts</span><span class="w"> </span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;The data type&amp;#39;s innermost thoughts&amp;quot;)</span><span class="w">
+  </span><span class="p">(</span><span class="nf">feeling-about</span><span class="w"> </span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="p">[</span><span class="n">x</span><span class="w"> </span><span class="n">y</span><span class="p">]</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;Feeling about self or other&amp;quot;))</span><span class="w">
+
+</span><span class="c1">;; implement the protocol in a specific type</span><span class="w">
+</span><span class="p">(</span><span class="nf">extend-type</span><span class="w"> </span><span class="n">java.lang.String</span><span class="w">
+  </span><span class="n">Psychodynamics</span><span class="w">
+  </span><span class="p">(</span><span class="nf">thoughts</span><span class="w"> </span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="p">(</span><span class="nb">str</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">; thinks, &amp;#39;Truly, the character defines the data type&amp;#39;&amp;quot;))</span><span class="w">
+  </span><span class="p">(</span><span class="nf">feeling-about</span><span class="w">
+    </span><span class="p">([</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="p">(</span><span class="nb">str</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">; is longing for a simpler way of life&amp;quot;))</span><span class="w">
+    </span><span class="p">([</span><span class="n">x</span><span class="w"> </span><span class="n">y</span><span class="p">]</span><span class="w"> </span><span class="p">(</span><span class="nb">str</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">; is envious of &amp;quot; y &amp;quot;&amp;#39;s simpler way of life&amp;quot;))))</span><span class="w">
+
+</span><span class="p">(</span><span class="nf">thoughts</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;blorb&amp;quot;)</span><span class="w">
+</span><span class="c1">; =&amp;gt; &amp;quot;blorb thinks, &amp;#39;Truly, the character defines the data type&amp;#39;&amp;quot;</span><span class="w">
+
+</span><span class="p">(</span><span class="nf">feeling-about</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;schmorb&amp;quot; 2)</span><span class="w">
+</span><span class="c1">; =&amp;gt; &amp;quot;schmorb is envious of 2&amp;#39;s simpler way of life</span><span class="w">
+
+</span><span class="c1">;; if you want default behaviour of this protocol for any type, then</span><span class="w">
+</span><span class="p">(</span><span class="nf">extend-type</span><span class="w"> </span><span class="n">java.lang.Object</span><span class="w">
+  </span><span class="n">Psychodynamics</span><span class="w">
+  </span><span class="p">(</span><span class="nf">thoughts</span><span class="w"> </span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;Maybe the Internet is just a vector for toxoplasmosis&amp;quot;)</span><span class="w">
+  </span><span class="p">(</span><span class="nf">feelings-about</span><span class="w">
+    </span><span class="p">([</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;meh&amp;quot;)</span><span class="w">
+    </span><span class="p">([</span><span class="n">x</span><span class="w"> </span><span class="n">y</span><span class="p">]</span><span class="w"> </span><span class="p">(</span><span class="nb">str</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;meh about &amp;quot; y))))</span><span class="w">
+
+</span><span class="p">(</span><span class="nf">thoughts</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w">
+</span><span class="c1">; =&amp;gt; &amp;quot;Maybe the Internet is just a vector for toxoplasmosis&amp;quot;</span><span class="w">
+
+</span><span class="p">(</span><span class="nf">feelings-about</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w">
+</span><span class="c1">; =&amp;gt; &amp;quot;meh&amp;quot;</span><span class="w">
+
+</span><span class="p">(</span><span class="nf">feelings-about</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;blorb&amp;quot;)</span><span class="w">
+</span><span class="c1">; =&amp;gt; &amp;quot;meh about blorb&amp;quot;</span><span class="w">
+
+</span><span class="c1">;; or you can use extend-protocol to define the same protocol for multiple types</span><span class="w">
+</span><span class="p">(</span><span class="nf">extend-protocol</span><span class="w"> </span><span class="n">Psychodynamics</span><span class="w">
+  </span><span class="n">java.lang.String</span><span class="w">
+  </span><span class="p">(</span><span class="nf">thoughts</span><span class="w"> </span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;Truly, the character defines the data type&amp;quot;)</span><span class="w">
+  </span><span class="p">(</span><span class="nf">feelings-about</span><span class="w">
+    </span><span class="p">([</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;longing for a simpler way of life&amp;quot;)</span><span class="w">
+    </span><span class="p">([</span><span class="n">x</span><span class="w"> </span><span class="n">y</span><span class="p">]</span><span class="w"> </span><span class="p">(</span><span class="nb">str</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;envious of &amp;quot; y &amp;quot;&amp;#39;s simpler way of life&amp;quot;)))</span><span class="w">
+
+  </span><span class="n">java.lang.Object</span><span class="w">
+  </span><span class="p">(</span><span class="nf">thoughts</span><span class="w"> </span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;Maybe the Internet is just a vector for toxoplasmosis&amp;quot;)</span><span class="w">
+  </span><span class="p">(</span><span class="nf">feelings-about</span><span class="w">
+    </span><span class="p">([</span><span class="n">x</span><span class="p">]</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;meh&amp;quot;)</span><span class="w">
+    </span><span class="p">([</span><span class="n">x</span><span class="w"> </span><span class="n">y</span><span class="p">]</span><span class="w"> </span><span class="p">(</span><span class="nb">str</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;meh about &amp;quot; y))))</span></code></pre></figure>
+</pre>
+<h1>Records</h1>
+<ul>
+  <li>클로저는 맵과 유사한 데이터 타입으로 커스텀 레코드(records)를 제공한다.
+    레코드는 맵과 같은 방식으로 키와 값을 연관짓고 키를 이용하여 값을 찾을 수
+    있으며, 맵과 같이 한번 만드어지면 변경이 불가능하다, 즉 immutable 하다. 다른
+    점은 레코드의 경우 필드(fields)를 정의할 수 있으며 필드는 값을 가질 수 있는
+    슬럿(slot)으로서 마치 맵의 키(key)를 명시하는 것과 같다. 또한, 레코드는 하나의
+    커스텀 타입으로 프로토콜을 확장할 수 있다는 점이 맵과 다르다.</li>
+</ul>
+<pre class="src" lang="clojure">
+<figure class="highlight"><pre><code class="language-clojure" data-lang="clojure"><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="n">were-records</span><span class="p">)</span><span class="w">
+</span><span class="p">(</span><span class="nf">defrecord</span><span class="w"> </span><span class="n">WereWolf</span><span class="w"> </span><span class="p">[</span><span class="nb">name</span><span class="w"> </span><span class="n">title</span><span class="p">])</span><span class="w">
+
+</span><span class="c1">;; you can create an instance of this record in three ways</span><span class="w">
+
+</span><span class="p">(</span><span class="nf">WereWolf.</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;David&amp;quot; &amp;quot;London Tourist&amp;quot;)</span><span class="w">
+</span><span class="c1">; =&amp;gt; #were_records.WereWolf{:name &amp;quot;David&amp;quot;, :title &amp;quot;London Tourist&amp;quot;}</span><span class="w">
+
+</span><span class="p">(</span><span class="nb">-</span><span class="o">&amp;</span><span class="n">gt</span><span class="c1">;WereWolf &amp;quot;Jacob&amp;quot; &amp;quot;Lead Shirt Discarder&amp;quot;)</span><span class="w">
+</span><span class="c1">; =&amp;gt; #were_records.WereWolf{:name &amp;quot;Jacob&amp;quot;, :title &amp;quot;Lead Shirt Discarder&amp;quot;}</span><span class="w">
+
+</span><span class="p">(</span><span class="nf">map-</span><span class="o">&amp;</span><span class="n">gt</span><span class="c1">;WereWolf {:name &amp;quot;Lucian&amp;quot; :title &amp;quot;CEO of Melodrama&amp;quot;})</span><span class="w">
+</span><span class="c1">; =&amp;gt; #were_records.WereWolf{:name &amp;quot;Lucian&amp;quot;, :title &amp;quot;CEO of Melodrama&amp;quot;}</span><span class="w">
+
+</span><span class="c1">;; you can import the records in another namespece, you&amp;#39;ll have to import it.</span><span class="w">
+</span><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="n">monster-mash</span><span class="w">
+  </span><span class="p">(</span><span class="no">:import</span><span class="w"> </span><span class="p">[</span><span class="n">were_records</span><span class="w"> </span><span class="n">WereWolf</span><span class="p">]))</span><span class="w"> </span><span class="c1">; Notice that were_records has an underscore, not a dash</span><span class="w">
+</span><span class="p">(</span><span class="nf">WereWolf.</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;David&amp;quot; &amp;quot;London Tourist&amp;quot;)</span><span class="w">
+</span><span class="c1">; =&amp;gt; #were_records.WereWolf{:name &amp;quot;David&amp;quot;, :title &amp;quot;London Tourist&amp;quot;}</span><span class="w">
+
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">jacob</span><span class="w"> </span><span class="p">(</span><span class="nb">-</span><span class="o">&amp;</span><span class="n">gt</span><span class="c1">;WereWolf &amp;quot;Jacob&amp;quot; &amp;quot;Lead Shirt Discarder&amp;quot;))</span><span class="w">
+</span><span class="p">(</span><span class="nf">.name</span><span class="w"> </span><span class="n">jacob</span><span class="p">)</span><span class="w">
+</span><span class="c1">; =&amp;gt; &amp;quot;Jacob&amp;quot;</span><span class="w">
+</span><span class="p">(</span><span class="no">:name</span><span class="w"> </span><span class="n">jacob</span><span class="p">)</span><span class="w">
+</span><span class="c1">; =&amp;gt; &amp;quot;Jacob&amp;quot;</span><span class="w">
+</span><span class="p">(</span><span class="nb">get</span><span class="w"> </span><span class="n">jacob</span><span class="w"> </span><span class="no">:name</span><span class="p">)</span><span class="w">
+</span><span class="c1">; =&amp;gt; &amp;quot;Jacob&amp;quot;</span><span class="w">
+
+</span><span class="c1">;; When testing for equality, Clojure will check that all fields are equal and that the two comparands have the same type:</span><span class="w">
+</span><span class="p">(</span><span class="nb">=</span><span class="w"> </span><span class="n">jacob</span><span class="w"> </span><span class="p">(</span><span class="nb">-</span><span class="o">&amp;</span><span class="n">gt</span><span class="c1">;WereWolf &amp;quot;Jacob&amp;quot; &amp;quot;Lead Shirt Discarder&amp;quot;))</span><span class="w">
+</span><span class="c1">; =&amp;gt; true</span><span class="w">
+</span><span class="p">(</span><span class="nb">=</span><span class="w"> </span><span class="n">jacob</span><span class="w"> </span><span class="p">(</span><span class="nf">WereWolf.</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;David&amp;quot; &amp;quot;London Tourist&amp;quot;))</span><span class="w">
+</span><span class="c1">; =&amp;gt; false</span><span class="w">
+</span><span class="p">(</span><span class="nb">=</span><span class="w"> </span><span class="n">jacob</span><span class="w"> </span><span class="p">{</span><span class="no">:name</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;Jacob&amp;quot; :title &amp;quot;Lead Shirt Discarder&amp;quot;})</span><span class="w">
+</span><span class="c1">; =&amp;gt; false !!! a record is not a map, i.e. it&amp;#39;s a different type !!!</span><span class="w">
+
+</span><span class="c1">;; Any function you can use on a map, you can also use on a record</span><span class="w">
+</span><span class="p">(</span><span class="nb">assoc</span><span class="w"> </span><span class="n">jacob</span><span class="w"> </span><span class="no">:title</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">;Lead Third Wheel&amp;quot;)</span><span class="w">
+</span><span class="c1">; =&amp;gt; #were_records.WereWolf{:name &amp;quot;Jacob&amp;quot;, :title &amp;quot;Lead Third Wheel&amp;quot;}</span><span class="w">
+</span><span class="p">(</span><span class="nb">dissoc</span><span class="w"> </span><span class="n">jacob</span><span class="w"> </span><span class="no">:title</span><span class="p">)</span><span class="w">
+</span><span class="c1">; =&amp;gt; {:name &amp;quot;Jacob&amp;quot;} &amp;lt;- that&amp;#39;s not a were_records.WereWolf</span><span class="w">
+</span><span class="c1">; REASON is that if you dissoc a record and then try to call a protocol method on the result, the record&amp;#39;s protocol method won&amp;#39;t be called.</span><span class="w">
+
+</span><span class="c1">;; you would extend a protocol when defining a record:</span><span class="w">
+</span><span class="p">(</span><span class="nf">defprotocol</span><span class="w"> </span><span class="n">WereCreature</span><span class="w">
+  </span><span class="p">(</span><span class="nf">full-moon-behavior</span><span class="w"> </span><span class="p">[</span><span class="n">x</span><span class="p">]))</span><span class="w">
+
+</span><span class="p">(</span><span class="nf">defrecord</span><span class="w"> </span><span class="n">WereWolf</span><span class="w"> </span><span class="p">[</span><span class="nb">name</span><span class="w"> </span><span class="n">title</span><span class="p">]</span><span class="w">
+  </span><span class="n">WereCreature</span><span class="w">
+  </span><span class="p">(</span><span class="nf">full-moon-behavior</span><span class="w"> </span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="w">
+    </span><span class="p">(</span><span class="nb">str</span><span class="w"> </span><span class="nb">name</span><span class="w"> </span><span class="o">&amp;</span><span class="nb">quot</span><span class="c1">; will howl and murder&amp;quot;)))</span><span class="w">
+
+</span><span class="p">(</span><span class="nf">full-moon-behavior</span><span class="w"> </span><span class="p">(</span><span class="nf">map-</span><span class="o">&amp;</span><span class="n">gt</span><span class="c1">;WereWolf {:name &amp;quot;Lucian&amp;quot; :title &amp;quot;CEO of Melodrama&amp;quot;}))</span><span class="w">
+</span><span class="c1">; =&amp;gt; &amp;quot;Lucian will howl and murder&amp;quot;</span></code></pre></figure>
+</pre>
+<ul>
+  <li>위 코드의 예[fn:2]에서 보였듯이, 맵을 대상으로 하는 함수는 또한 레코드에 대해서도
+    적용 가능하다. 왜냐하면 레코드와 맵의 접근 인터페이스는 동일하기 때문이다.
+    그렇다면, 언제 레코드를 사용하고 언제 맵을 사용하는가? 이 질문에 대하여
+    일반적으로 동일한 필드를 갖는 맵을 여러번(계속해서) 사용하다면 레코드를
+    사용해야 한다. 데이터의 집합은 응용 도메인의 정보를 표현하기 위한 것이므로,
+    코드상에서 도메인 개념에 기반한 이름(필드명/레코드명)을 제공하는 것이
+    유리하다. 뿐만이 아니라 레코드 접근이 맵을 접근하는 것 보다 더 성능이 좋기에
+    더 효율적이다. 또한, 프로토콜을 사용한다면 레코드 생성이 필요하다.</li>
+</ul>
+<h1>Further data types[fn:3] for abstraction</h1>
+<h2>deftype</h2>
+<h2>reify</h2>
+<h2>proxy</h2>
+<p>[fn:3] http://clojure.org/datatypes/</p>
