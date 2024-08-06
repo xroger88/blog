@@ -1,0 +1,8 @@
+#+title: dev note
+#+tags: dev
+
+* DONE Need to make my dev note in xroger88.github.io using JekyII
+CLOSED: [2020-04-16 Thu 16:39]
+** https://jekyllrb.com/
+** Refer to https://vlaaad.github.io/  <---- very simple blog
+** https://xroger88.github.io/

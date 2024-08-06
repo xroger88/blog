@@ -1,27 +1,14 @@
-#+TITLE:  Test ...
+:PROPERTIES:
+:ID:       08878b49-6bca-4abe-b84d-168a855ab4a6
+:END:
+#+TITLE:  Fulcro Clojure(Script)
 #+AUTHOR: xroger88
-#+TAGS: fulcro,clojure,clojurescript
-#+DATE:  <2024-08-02 Fri 13:00>
-#+OPTIONS: toc:nil num:nil ^:nil
+#+TAGS: fulcro clojure clojurescript
 #+DESCRIPTION: Fulcro Component Model and Rapid Application Development
 
-Just to introduce about Fulco application ...
-test subscript nil for a_1 b^3
-
-* Table of Contents
-:PROPERTIES:
-:TOC:      :include all :depth 1 :force (nothing) :ignore (this) :local (nothing)
-:END:
-
-:CONTENTS:
-- [[#reference][Reference]]
-- [[#시작하며-][시작하며 ...]]
-:END:
+hhh
 
 * Reference
-:PROPERTIES:
-:CUSTOM_ID: reference
-:END:
 - Fulcro GuideBook: https://book.fulcrologic.com/#_fulcro_from_10000_feet
 - Fulcro RAD: https://book.fulcrologic.com/RAD.html#_introduction
 - React Basic: https://reactjs.org/docs/hello-world.html
@@ -30,9 +17,6 @@ test subscript nil for a_1 b^3
 - Dates in Clojure: Making Sense of the Mess - https://lambdaisland.com/blog/2017-07-26-dates-in-clojure-making-sense-of-the-mess
 
 * 시작하며 ...
-:PROPERTIES:
-:CUSTOM_ID: 시작하며-
-:END:
 - Fulco 컴포넌트 모델은 React 컴포넌트를 근간으로 하여 컴포넌트의 속성값과 상태값을 어플리케이션 DB에서 쿼리 및 트랜잭션하여 관리한다.
   컴포넌트 정의시 어플리케이션 DB에 저장/검색될 떄 기준이되는 Ident 및 쿼리문을 명시하는 것이 특징이다.
   어플리케이션 DB는 Datascript와 같은 로컬 DB이며 컴포넌트의 Ident 기준으로 정규화되어 있다.

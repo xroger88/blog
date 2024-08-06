@@ -1,0 +1,199 @@
+:PROPERTIES:
+:ID:       5211ec66-779a-4e0b-a1a6-e27c3e5f8c65
+:END:
+#+TITLE: Understanding on Transducer
+#+AUTHOR: xroger88
+#+TAGS: transduer clojure scheme
+#+DATE: <2024-08-06 Tue 14:00>
+#+DESCRIPTION: 트랜스듀서(transducer)에 대한 이해 및 활용
+
+함수형 언어에서 지원하는 트랜스듀서(Transducer)란 무엇인지 개념에 대하여 알아 보고, LISP 계열 언어인 클로저(Clojure)와 스킴(Scheme)에서 어떤한 용도로 트랜스듀서를 만들어서 사용하고 응용하는지, 어떤 차이가 있는지 살펴보자.
+
+* 개요
+클로저 언어를 배우면서 처음 트랜스듀서를 접했을 떄 대략적으로 어떤 용도로 사용된다는 것은 알았지만 충분히 설명 가능하지 않았다. 트랜스듀서를 활용하여 기능을 구현하는 일이 많치 않았던 것도 있지만 충분히 깊게 이해하지 못했기에 내가 필요한 기능을 구현하는데 실제적으로 적용하지 못한 것은 아닌가 생각된다. 스킴 언어를 구현한 GNU 가일(Guile)을 공부하면서 트랜스듀서에 대한 내용을 좀 더 이해할 수 있게 되었기에 그 내용을 정리하고자 한다.
+
+* 트랜스듀서란?
+트랜스듀서는 Tranforming + Reducing 을 동시에 수행하는 함수의 일종으로 어떤 동작의 본질과 연속된 입력->처리->출력의 흐름을 분리하여 입력, 처리, 출력으로 구성된 루프(혹은 이터레이션/리커젼) 구조를 기반으로 본질에 해당하는 동작을 수행하도록 하는 패턴을 추상화한 것이다. 여기서 입력은 입력 스트림/시퀀스/콜렉션에서 입력 아이템을 하나씩 접근하는 것을 의미하고, 처리란 (1) 입력 아이템에 대하여 변환 함수(Transforming Function)를 적용하여 변환된 값을 만드는 부분과 (2) 지금까지 누적된 결과값과 변환된 값을 적용하여 새로운 누적 결과값을 만드는 축약 함수(Reducing Function)를 적용하는 부분을 의미한다. 출력은 누적 처리의 결과값을 출력 스트림/시퀀스/콜렉션에 반영하는 것을 의미한다. 이 모든 과정은 리듀스(Reduce) 함수가 가지는 기본 기능을 확장하여 구현될 수 있다.
+
+함수형 언어에는 Map, Filter 와 같이 입력 스트림/시퀀스/콜렉션을 받아서 특정한 처리를 한 후 출력 스트림/시퀀스/콜렉션으로  반환하는 다양한 함수가 존재 한다. 이러한 함수들의 경우 입력을 접근하는 방식, 출력을 내어 주는 방식, 입력 요소에 대하여 출력 요소로 매핑하는 일련의 단계를 반복하는 루프 기능 등 본질적인 기능은 같으나 다르게 구현되어야 한다. 다르게 구현될 수 있는 부분은 (1) 입력되는 스트림/시퀀스/콜렉션으로 부터 하나의 구성요소(아이템)를 얻어서 추가적인 변환을 하는데 적용할 아이템 변환 함수, (2) 축약된 출력값(스트림/시퀀스/콜렉션)과 변환된 입력값을 인자로 받아서 출력값을 재구성하는 축약 함수 등으로 추상화될 수 있다. 예들들면, 클로저 라이브러리에서 제공하는 컬렉션 및 스트림 처리 함수들 cat, mapcat, remove, take, take-while, take-nth, drop, drop-while, replace, partition-by, partition-all, keep-indexed, map-indexed, distint, interpose, dedupe, random-sample, 등 이 모든 함수들에 대하여 스트림/시퀀스/컬렉션 타입에 따라서 같은 함수를 매번 다르게 구현을 해야 하는냐? 한번 구현하여 여러 군데에서 사용할 수는 없을까? 이 질문에 대한 해결책이 트랜스듀서이다.
+
+좀 더 형식적으로 정의하면 아래와 같다. 여기서 편의상 입력과 출력은 시퀀스의 한 종류인 리스트(list)로 한정한다.
+~트랜스듀서(xform): rf -> input-list -> output-list~
+즉, xform은 다음과 같이 생성된다.
+- 먼저, 입력값에 대한 변환 함수를 정의하고 이를 적용하여 트랜스듀서를 만든다.
+  : (make-xform tf) 하면 rf->input-list->output-list 형식의 xform 함수를 리턴한다.
+  : 예를 들면, (def xform (make-xform (fn [x] (+ x 1))))
+- 만들어지 트랜스듀서에 리듀스 함수 및 입력 리스트를 아규먼트로 호출하여 출력 리스트를 얻는다.
+  : (xform rf input-list) 하면 output-list를 리턴한다.
+  : 예를 들면, (xform + '(1 2 3)) => 9 ;; 2+3+4
+여기서 리듀스 함수는 다음과 같은 조건에 만족해야 한다.
+  * (rf) => the identity value for rf, for example, (+) => 0
+  * (rf val1) => val1, for example, (+ 1) => 1
+  * (rf val1 val2) => the result value of ~rf~ computation, for example, (+ 1 2) => 3
+
+
+* 클로저 언어에서의 트랜스듀서
+- 참조: https://labs.uswitch.com/transducers-from-the-ground-up-the-essence/
+
+#+BEGIN_SRC clojure
+  ;;{% highlight clojure %}
+  (defn reduce [f result coll]
+    (if (not= '() coll)
+      (reduce f (f result (first coll)) (rest coll))
+      result))
+
+  (reduce + 0 (range 10))
+  ;;{% endhighlight %}
+#+END_SRC
+
+#+RESULTS:
+| #'user/reduce |
+|            45 |
+
+위 리듀스 함수는 콜렉션의 각 항목에 대하여 이전 결과값(result)과 입력값에 대한 계산(축약) 함수(~f~)의 결과값을 누적한다. 이러한 재귀형태는 반복적이며, loop-recur로 변환이 되면 스택을 소비하지 않게 구현될 수 있다. 리듀스에 대한 흥미있는 측면은 무엇을 변환하고자 하는 의도(의미) 즉, ~f~ 로 부터 반복 개념을 분리한 것에 있다.
+
+#+BEGIN_SRC clojure
+;;{% highlight clojure %}
+(defn mapping [rf]
+  (fn [result el]
+    (rf result (inc el))))
+
+(reduce (mapping conj) [] (range 10))
+
+(defn filtering [rf]
+  (fn [result el]
+    (if (odd? el)
+      (rf result el)
+      result)))
+
+(reduce (filtering conj) [] (range 10))
+;;{% endhighlight %}
+#+END_SRC
+
+#+RESULTS:
+| #'user/mapping         |
+| [1 2 3 4 5 6 7 8 9 10] |
+| #'user/filtering       |
+| [1 3 5 7 9]            |
+
+위 코드에서 리듀스 함수를 활용하여 mapping과 filtering을 처리를 할 때, mapping과 filtering의 차이는 새로운 입력값에 대하여 매핑된 출력값을 만드는 것의 차이라는 것을 알 수 있다. 따라서, 리듀스 함수의 규약에 따라 ~reducing function f: result->input->output~ 를 리턴하는 lambda function을 만들어서 result과 input을 새로운 출력값으로 매핑하는 함수(예, conj)를 파라미터로 추상화한다. 더 들어가면, 매핑의 경우 inc 그리고 필터링의 경우 odd?와 같은 기능함수가 달라 질 수 있으므로 이를 파라미터로 추상화하면 다음과 같다.
+
+#+BEGIN_SRC clojure
+;;{% highlight clojure %}
+(defn mapping [f]
+  (fn [rf]
+    (fn [result el]
+      (rf result (f el)))))
+
+(reduce ((mapping inc) conj) [] (range 10))
+
+(defn filtering [pred?]
+  (fn [rf]
+    (fn [result el]
+      (if (pred? el)
+        (rf result el)
+        result))))
+
+(reduce ((filtering odd?) conj) [] (range 10))
+;;{% endhighlight %}
+#+END_SRC
+
+#+RESULTS:
+| #'user/mapping         |
+| [1 2 3 4 5 6 7 8 9 10] |
+| #'user/filtering       |
+| [1 3 5 7 9]            |
+
+위 코드의 함수명을 다시 정리하면 다음과 같고, 이것이 clojure 표준 라이브러리에서 제공하는 map, filter에 대한 트랜스듀서이다. 인수의 갯수에  따라서 일반적인 map, filter가 될 수도 있고, 하나의 인수를 가지므로서 트랜스튜서가 될 수 있다.
+
+#+BEGIN_SRC clojure
+  ;;{% highlight clojure %}
+  ;; excerpted from clojure.core/map defined in core.clj
+  (defn map [f]
+    (fn [rf]
+      (fn
+        ([] (rf))
+        ([result] (rf result))
+        ([result input]
+         (rf result (f input)))
+        ([result input & inputs]
+         (rf result (apply f input inputs))))))
+
+  (transduce (map inc) conj (range 10))
+  ;; same as: (reduce ((map inc) conj) [] (range 10))
+
+  ;; transducer-awareness in many other places, the following for instance,
+  ;; are also possible and remove the need for an explicit conj:
+  (sequence (map +) (range 10) (range 10))
+  (into [] (map inc) (range 10))
+  ;;{% endhighlight %}
+#+END_SRC
+
+#+RESULTS:
+| #'user/map                 |
+| [1 2 3 4 5 6 7 8 9 10]     |
+| (0 2 4 6 8 10 12 14 16 18) |
+| [1 2 3 4 5 6 7 8 9 10]     |
+
+
+** 조합에 의한 트랜스듀서 (Composibility)
+
+트랜스듀서는 위에서 살펴본 map, filter 버전과 같이 순차 반복 구조로 부터 변환(transforming) 및 리듀스(reducing)  함수들을 분리한다. 이러한 디자인의 흥미로운 결과는 트랜스듀서들을 조합하여 새로운 트랜스듀서를 만들어 낼 수 있다는 것이다.
+
+#+BEGIN_SRC clojure
+;;{% highlight clojure %}
+(def inc-and-filter (comp (map inc) (filter odd?)))
+(def special+ (inc-and-filter +))
+(special+ 1 1)
+;; => 1
+(special+ 1 2)
+;; => 4
+(reduce special+ 0 (range 10))
+;; => 25
+(reduce + 0 (clojure.core/filter odd? (clojure.core/map inc (range 10))))
+;; => 25
+(transduce (comp (clojure.core/map inc) (clojure.core/filter odd?)) + (range 10))
+;; => 25
+;;{% endhighlight %}
+#+END_SRC
+
+#+RESULTS:
+| #'user/inc-and-filter |
+|       #'user/special+ |
+|                     1 |
+|                     4 |
+|                    25 |
+|                    25 |
+|                    25 |
+
+트랜스듀서를 조합하는 것은 값을 리턴하는 함수를 조합하는 것과 실행순서가 다름을 인지해야 한다. 예를 들면 (comp (partial + 1) (partial - 2))는 입력 x에 대하여 (- 2 x) 결과값에 +1이 되는 식으로 조합이된다. 이는 comp 자체가 right-left 방향으로 함수 조합이 이루어 지기 때문이다. (comp f1 f2 f3)는 f1(f2(f3))로 평가가 이루지기 때문이다. 조합되는 각 함수 결과가 하나의 값이라면 평가순서는 right-left로 이루어진 반면 결과가 함수(즉 computation)라면 실제  평가는 left-right로 이루어지는 것을 주지해야 한다. transduers의 조합은 따라서 평가가 left-right로 이루어지며 reducing 함수의 result와 input에 관련하여 transformation 타입에 따라서 input을 변형하거나 상태에 따라서 추가되거나(injecting) 제거되거나(filtering) 될 수 있다. 최종적으로 redecing function에 result, 변형된 input이 적용된 결과를 얻는다.
+
+** 트랜스포트(예, 채널/큐, 스트림)에 걸친 재사용 (Reuse across transports)
+트랜스듀서(transducer)에 적용되는 컬렉션은 트랜스듀서와 완전히 분리되어 적용되기 때문에 다른 트랜스포트(transport)를 활용하여 트랜스듀서 재사용이 가능합니다. 여기서 트랜스포트는 아이템으로 구성된 콘렉션이 반복되는 방법을 의미한다. 표준 라이브러리에 있는 대부분의 트랜스포트 중에 하나는 순차적인 반복 즉, map 또는 filter와 같이 시퀀스 함수를 사용한다. 그러나, 다른 종류의 트랜스포트가 있다. 예를들면, core.async 라이브러리는 채널(channel)이라 부르는 추상화된 데이터 구조(blocking queue 동작과 유사함)를 통한 반복(즉, 스트림 처리)을 구현한다.
+
+** Custom transducers
+** A logging (stateless) transducer
+** An interleave (stateful) transducer
+** Laziness
+- 표준 라이브러리에서 트랜스듀서를 적용하는 4가지 방식이 있다. 입력을 점진적으로
+  소비하면서 게으르게 트랜스듀서 체인(transducer chain)을 적용하는데 관심이
+  있다면, 그러한 목적으로 설계된 sequence와 eduction을 사용할 수 있다. 입력에
+  대하여 다중 평가(해석)이 요구되는 경우, eduction은 캐슁 없이 다중 평가를
+  수행하는 반면 sequence는 한번 평가되면 메모리에 캐쉬되어 나중에 참조된다. 어떤
+  방식을 선택하는냐는 memory-computation trade-off의 문제이다.
+
+** Parallelism
+- core.async의 pipelines, fold 등에 관하여, fold는 "divde and conquer" 모델에
+  기반하여 병렬화를 지원한다. 처리해야할 일을 병렬처리가 가능한 꾸러미로 나누고
+  각 꾸러미를 동시에 병렬처리(계산)하고, 각 꾸러미의 결과를 다시 최종 결과로
+  결합한다.
+- pipelines 및 fold 모두는 상태를 기억하는 트랜스듀서가 포함되지 않아야 작동 가능하다.
+
+** Resources
+- The blog post by Rich Hickey introducing transducers
+- The official transducer reference
+- Christophe’s Grand extended transducer library
+- Timothy Baldrige’s screencast
+- The content of this post is inspired by a book by the same author of this
+  article. For additional information and extended examples, please have a look
+  Clojure Standard Library: an Annotated Guide.

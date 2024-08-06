@@ -1,0 +1,1308 @@
+#+TITLE: Emacs-Lisp Introduction
+#+tags: emacs lisp
+
+Let me introduce about elisp programming.
+...
+
+* Reference
+** Emacs Lisp Reference Manual [Robert Krawitz, Bil Levis, Dan LaLiberte, Rechard M. Stallman and dChris Welty, the valunteers of the GNU manual group]
+** Emacs Lisp Programming Introduction [Robert J. Chassell]
+
+* Emacs Lisp Reference Manual
+** Lisp Data Types
+*** Printed Representation and Read Syntax
+어떤 객체의 인쇄된 표현은 그 객체의 Lisp 프린터(함수 =prin1=)에 의해서 생성된 출력의 형태(Format)이다. 어떤 객체를 읽어 들이는 문법(read syntax)는 그 객체의 Lisp 리더(함수 =read=)가 받아 들이는 입력의 형태(format)이다. 이것은 항상 유일할 필요는 없다; 많은 종류의 객체의 경우 하나 이상의 읽기 문법을 가진다.
+대부분의 경우에 객체의 인쇄된 표현이 그 객체를 읽어 들이는 문법과 동일하다. 그러나, 몇가지 타입(type)은 읽어 들이는 문법이 없는 경우가 있는데, 왜냐하면 이러한 타입의 객체를 Lisp 프로그램의 상수(constants)로 해석하는 것은 의미가 없기 때문이다.  이러한 객체들은 해쉬 표기법(hash notation), 즉 '#<' 문자들로 시작하여 타입이름및 객체의 이름 그리고 '>'로 끝나는 문자열로 표기된다. 예들들면,
+: (current-buffer)
+:   => #<buffer objects.taxi>
+해쉬 표기법은 전혀 읽혀 질 수 없기에 Lisp 리더는 '#<'를 만날 때마다 =invalid-read-syntax 라는 오류(error)를 발생한다.
+다른 언어에서 표현식(expression)은 텍스트(text)이며 다른 형태를 갖지 않는다. Lisp에서 하나의 표현식은 직접적으로 Lisp 객체이며 단지 보조적으로 그 객체를 읽어 들이기 위한 문법에 따르는 텍스트이다. 종종 이러한 구분을 강조할 필요는 없지만 항상 기억해야만 한다. 그렇치 않으면 종종 매우 혼란스러울 수 있다.
+상호작용에 기반하여 어떤 표현식을 평가(evaluate)할 때 Lisp 해석기는 먼저 그것의 텍스트 표현을 읽어 들이고 Lisp 객체로 변환한 다음 그 객체를 평가한다. 그러나, 평가 및 읽어 들이는 것은 개별적인 행위이다. 읽어 들이는 행위는 텍스트로 표현된 것을 읽어서 Lisp 객체를 반환하며; 그 객체는 나중에 평가되거나 평가되지 않는다.
+*** Special Read Syntax
+Emacs Lisp은 특별한 해쉬 표기법에 따라서 많은 특수 객체 및 생성(constructs)을 표현한다.
+: '#<...>' 읽어 들이는 문법이 없는 객체들
+: '##' 이름이 빈문자열로 구체화된 심벌(symbol)에 대한 인쇄된 표현
+: '#₩' 함수에 대한 간략화된 표현(이름이 없는 함수)
+: '#:' 아직 구체화되지 않은 심벌, foo 라는 구체화되지 않은 심벌은 '#:foo'로 표현됨
+: '#N' 순환구조일 경우 이러한 생성자가 그 구조가 자체적으로 어디에서 반복되는 지에 대하여 표현한다. 여기서 'N'은 시작하는 리스트 카운트임.
+:           (let ((a (list 1))))
+:               (setcdr a a))
+:           => (1 . #0)
+: '#N='
+: '#N#' '#N='는 어떤 객체를 구분하기 위한 레이블(이름)을 부여하며, '#N#'은 레이블된 객체를 지시한다. 따라서, 나중에 해당 객체를 다시 읽어을 경우, 복사본이 아닌 동일한 객체로 처리됨
+: '#xN' 'N'은 16진수 값으로 표현됨 ('#x2a')
+: '#oN' 'N'은 8진수 값으로 표현됨 ('#o52')
+: '#bN' 'N'은 2진수 값으로 표현됨 ('#b101010')
+: '#(...)' 문자열 텍스트 속성들임
+: '#^' 문자 테이블을 의미함 (Char-Table Type 참조)
+: '#s(hash-table ...)' 해쉬 테이블을 의미함 (Hash Table Type 참조)
+: '?C' 'C'는 문자를 의미함 (Basic Char Syntax 참조)
+: '#$' 바이트로 컴파일된 파일에서 현재 파일 이름을 의미함 (Docs and Compiliation 참조). Emacs Lisp 소스 파일에는 사용되지 않음.
+: '#@N' 'N' 만큼의 문자들을 걷너 뜀(Commnets 참조). 이것은 바이트로 컴파일된 파일에서 사용됨. Emacs Lisp 소스 파일에는 사용되지 않음.
+: '#&N' 'N' 길이의 비트(t => 1 or nil => 0)를 갖는 불리언(boolean) 벡터를 의미함
+: '#[' 바이트 코드 함수 객체를 의미함
+
+*** Comments
+';' 이 사용됨. 라인의 끝까지 커멘트로 해석함.
+*** Programming Types
+Emacs Lisp에서는 타입에 대하여 두가지 일반 분류가 있음. Lisp 프로그래밍과 관련된 것들 및 에디팅과 연관된 것들.
+**** Integer Types
+두가지 종류의 정수 타입이 있음. 작은 수에 대하여30bits  =fixnums=, 큰 수에 대하여 임의 정확도(precision)을 갖는 =bignums=.
+모든 수는 =eql= 또는 = 으로 비교될 수 있으며, fixnums 는 또한 =eq=로 비교될 수 있다. fixnum인지 bignum인지 시험하기 위해서 =most-negative-fixnum= 및 =most-positive-fixnum=과 비교하거나 =fixnump= 및 =bignump= 를 사용할 수 있다.
+**** Floating-Point Type
+실수에 대한 표현, 컴퓨터에서 표현하는 과학적 표기법은 보통 부동소수점으로 10진수를 기반으로 한다. 예를 들면, 0.1은 1*10^-1 같이 표현한다. 여기서 유효 숫자들의 정확한 수와 가능한 지수의 범위는 특정 기계에 의존한다. Emacs에서는 C 데이터 타입 =double= 을 사용하여 부동소수점 값을 저장하며, 내부적으로 10의 멱승(power)이 아니라 2의 멱승을 기록한다.
+인쇄된 표현으로는 '1500.0', '+15e2', '15.0e+2', '+1500000e-3' 그리고'.15e4'는 모두1500이라는 값을 의미한다.
+**** Character Type
+Emacs Lisp에서의 문자는 정수값과 다른지 않다. 즉, 문자는 문자코드로 표현된다. 예를들면, 문자 =A= 는 정수값 65로 표현된다.
+개별 문자들이 종종 프로그램에 사용되지만 대부분은 문자열(strings)로 더 많이 사용된다. 문자열과 버퍼에서 사용될 수 있는 문자는 0~4194303(22bits)로 제한되며, 코드 0~127은 ASCII 코드이며, 나머지는 non-ASCII 코드이다. 키보드 입력을 표현하는 문자들은 컨트롤, 메타 및 쉬프트와 같은 수정키(modifier keys)를 표현해야 하기에더 넓은 범위를 갖는다.
+문자에 대하여 인간이 읽기가 가능하도록 하기 위한 특수 함수들이 있음 (Describing Characters 참조)
+***** Basic Char Syntax
+보통의 알파벳과 숫자가 조합된 문자들에 대한 읽기 문법은 해당문자 앞에 '?'를 붙인다. 예들들면, ?Q => 81, ?q => 113.
+특수문자(punctuation)에 대해서는 특별한 문법적 의미를 부여하기 위해서 '\'를 앞에 붙인다. 예를 들면, '?\('는 가로열기문자를표현하는 방법이다. '\'는 '?\\'로 표현된다.
+control-g, backspace, tab, newline, vertical tab, formfeed, space, return, del, escape 등 제어문자는 '?\a', '?\b', '?\t', '?\n', '?\t', '?\f', '?\s', '?\r', '?\d', '?\e'에 해당한다. 만약에'?\s'에 '-'가 붙으면 다른 의미를 갖는데, 다음에 오는 문자에 대한 수정키를 적용하는 것이다.
+: ?\a => 7              ; control-g, C-g
+: ?\b => 8              ; backspace, BS, C-h
+: ?\t => 9              ; tab, TAB, C-i
+: ?\n => 10             ; newline, C-j
+: ?\v => 11             ; vertical tab, C-k
+: ?\f => 12             ; formfeed character, C-l
+: ?\r => 13             ; carriage return, RET, C-m
+: ?\e => 27             ; escape character, ESC, C-[
+: ?\s => 32             ; space character, SPC
+: ?\\ => 92             ; backslash character, \
+: ?\d => 127            ; delete character, DEL
+
+** Variables
+*** Global Variables
+*** Variables that Never Change
+=t=, =nil=
+*** Local Variables
+*** Scoping Rules for Variable Bindings
+각 로컬 바인딩(local bindings)은 공간적 범위(scope) 및 시간적 범위(extent)을 가진다. 여기서 공간적 범위는 바인딩이 접근될 수 있는 텍스트 코드에 어디를 가리키는 것이며, 시간적 범위는 프로그램이 실행될 때 언제 해당 바인딩이 존재하는가를 의미한다.
+기본적으로, Emacs가 만든 로컬 바인딩은 동적 바인딩(=dynamic bindings=)이며, 그러한 바인딩은 공간적으로 동적인 범위(=dynamic scope=)를 가지며 이는 프로그램의 어떤 부분도 잠재적으로 그 바인딩 변수에 접근 가능하다. 또한, 시간적으로 동적인 범위를 갖는데, 해당 바인딩은 변수를 바인딩한 폼(forms, 예 let)이 실행되고 있는 동안에만 유지된다.
+Emacs는 선택적으로 렉시컬 바인딩(lexical bindings)을 만든다. 렉시컬 바인딩은 공간적으로 바인딩이 이루어진 구문내에서 해당 변수에 대한 접근이 가능하다는 것을 의미하며 시간적 범위로는 클로저(=closures=)라는 특별한 객체를 이용하여 어떤 조건하에서는 바인딩 폼의 실행이 끝나더라도 해당 바인딩이 계속 살아 있는 즉, 시한이 정해지지 않은 범위(=indefinite extent=)를 가질 수 있다.
+**** Dynamic Binding
+기본적인 로컬 바인딩은 동적으로 적용되며 바인딩이 된 폼내에서 호출된 함수에서 해당 바인딩을 참조할 경우 로컬로 바인이된 변수의 값이 적용된다.
+동일한 심볼이 존재할 경우 이전 바인딩(로컬 혹은 글로벌)을 감추고, 즉 shadowing을 하고 바인딩 폼에서 벗어나면 이전 바인딩된 값으로 해당 심볼의 값을 되돌린다.
+: (defvar x -99) ; x receives an initial value of -99
+: (defun getx () x) ; x is used free in this function
+: (let ((x 1)) (getx)) ; x is dyanmically bound
+:   => 1
+: ;; After the =let= form finishes, x revert to its previous value, which is -99
+다른 사례를 들면,
+: (defvar x -99)
+: (defun addx () (setq x (1+ x)))
+: (let ((x 1)) (addx) (addx)) => 3
+: (addx) => -98
+동적 바인딩은 Emacs에서 간단하게 구현이 된다. 각 심볼은 값을 저장하는 셀(value cell)을 가진다. 현재 바인딩된 동적인 값을 가지고 있으며, 어떤 폼에서 해당 심볼에 대하여 로컬 바인딩이 되는 경우 예전 값을 스택에 저장하고 새롭게 주어진 값을 심볼의 value cell에 저장한다. 바인딩 폼에서 벗어나게 되면 예전에 저장된 값을 스택으로 부터 복구를 해 준다.
+**** Proper Use of Dynamic Binding
+동적 바인딩은 매우 유용하다, 어떤 변수의 바인딩 값을 지역화된 범위내에서 다른 값을 지정하여 참조할 수 있으므로. 그러나, 제한 없이 사용될 경우 프로그램을 이해하기 어렵게 하기에 유의해야 한다. 두가지 제안 방식으로 활용하자.
+- 만약 해당 변수가 글로벌 정의가 아니라면, 해당 바인딩 구문내에서 지역 변수로만 사용하자. 예를들면, let 구문의 몸체. 만약에 이러한 쓰임새가 프로그램내에서 일율적으로 이루어 진다면그 바인딩 변수의 값은 어떤 다른 동일한 이름을 가진 심볼이 다른 곳에서 사용되더라도 영향을 받지 않는다.
+- 그러치 않을 경우, 즉 전역 변수를 정의 해야 할 경우는 =defvar=, =defconst=, =defcustom= 으로 변수를 정의하자. 보통 그러한 정의는 Emacs Lisp 파일의 최상위에서 이루어 지며, 가능한 그 변수의 의미와 목적에 대한 설명을 포함한다. 또한, 이름이 충돌되지 않도록 신중하게 변수 이름을 선택해야 한다. 이렇개 하면, 해당 변수의 적용 효과 등에 대하여 알고 있는 상태에서 프로그램의 어디에서 해당 변수를 다시 바인드하여 사용하더라도 해당 변수를 참조시 정의가 무엇이지 되돌아 볼 수 있다. 즉, C-h v 커맨드를 사용하여. 예를 들면, =case-fold-search= 동적 바인딩 변수 참조.
+  : (defun search-for-abc ()
+  :     "Search for the string \"abc\", ignoring case differences."
+  :     (let ((case-fold-search t))
+  :         (re-search-forward "abc")))
+**** Lexical Binding
+
+** Functions
+*** Lamda Expressons
+*** Anonymous Functions
+=lambda=
+=function= function-object
+이와 같은 특별한 폼은 =quote= 유사하게 function-object를 해석하지 않고 반환한다. 차이점은 function-object이 유효한 lamda 표현식이라고 가정할 떄 1) 해당 코드가 바이트로 컴파일될 떄 함수 객체로 바이트 코드화되며, 2) 렉시컬 바인딩이 가능하도록 설정된 경우 함수 객체는 클로저(closure)로 변환된다.
+함수 객체가 심볼이며 해당 코드가 바이트 컴파일될 때 바이트 컴파일러는 그 함수가 정의되지 않거나 또는 런타임에 알려지지 않을 지 모름을 경고한다.
+읽기 문법에 따라 #'이 사용되므로, 하기 폼들은 동일하다.
+: (lamda (x) (* x x))
+: (function (lamda (x) (* x x)))
+: #'(lambda (x) (* x x))
+*** Generic Functions
+=cl-defgeneric=
+=cl-defmethod=
+*** Accessing Function Cell Contents
+=symbol-function= symbol
+=fboundp= symbol
+=fmakunboud= symbol
+=fset= symbol definition (where definition could be function defintion or indirect funtion like keyboard marco)
+: (fset 'kill-two-lines "\^u2\^k") => "\^u2\^k"
+*** Closures
+렉시컬 바인딩이 선택된 경우 모든 함수의 정의(defun, lambda, function or #')는 클로저로 자동 변환된다.
+클로저는 그 함수가 정의될 때 존재하는 렉시컬 환경에 대한 기록을 가지고 다니는 함수이다. 즉 호출될 경우 그 함수내에서 참조되는 모든 로컬 바인딩 변수는 렉시컬 환경에 기초하여 변수 값이 구해 진다. 다른 모든 면에서 클로저는 전형적인 함수와 같다.
+Emacs Lisp에서 클로저 객체는 심볼 =closure=를 첫번째 인자, 렉시컬 환경을 표현하는 리스트를 둘번째 인자 등등을 갖는 리스트로 표현된다.
+: ;; lexical binding is enabled
+: (lamda (x) (* x x)) => (closure (t) (x) (* x x))
+그러나, 글로저의 내부 구조는 내부적인 구현사항이므로 직접적인 변경 및 조사는 바람직하지 않다.
+*** Advising Emacs Lisp Functions
+다른 라이브러리에 있는 함수를 변경하려고 할 떄, 또는 어떤 hook 이나 process filter, 함수 값을 가지는 변수 혹은 객체 필드를 변경하려고 할 떄 fset이나 이름이 있는 함수의 경우 defun, hook 변수의 경우 setq, 프로세스 필터의 경우 set-process-filter와 같은 setter 함수 사용할 수 있으나 이전의 값을 완전히 버리는 것과 같기에 의도와는 다른 결과를 초래할 수 있다.
+함수에 대한 호출시 부가적으로 취할 수 있는 보조적인 행위에 대하여 기술하므로서, 즉 advising을 하므로서 전체 함수를 재정의하는 것 보다 더 좋은 방식을 취할 수 있다.
+함수의 정의에 =advise=를 추가할 수 있는 Emacs Lisp의 시스템은 두가지 기본적인 집합을 제공한다. 하나는 코어셋(core set)으로 변수 및 객체 필드에 담겨있는 함수값에 대하여 =add-function=, =remove-function= 와 같은 기초 함수를 활용하는 경우와 이름이 있는 함수에 대하여 =advice-add= 및 =advice-remove= 등을 사용하는 또다른 집합(another set)이 이에 해당한다.
+간단히 예를 들면, 함수가 호출될 떄 그 결과 값을 변경하는 경우 다음과 같은 advice를 추가 한다.
+: (defun my-double (x) (* x 2))
+: (defun my-increase (x) (+1 x))
+: (advice-add 'my-double :filter-return #'my-increase) ;; my-double 호출시 my-increase가 대신 호출되어 결과값을 반환한다
+: (advice-remove 'my-double #'my-increase)
+또 다른 예로, 프로세스 필터에 대한 호출을 트레이싱하는 경우
+: (defun my-tracing-function (proc string)
+:   (message "Proc %S received %S" proc string))
+: (add-function :before (process-filter proc) #'my-tracing-function) ;; ...
+: (remove-function (process-filter proc) #'my-tracing-function)
+비슷하게 =display-buffer= 라는 이름을 가진 함수에 대하여 트레이싱하길 원한다면,
+: (defun his-tracing-function (orig-fun &rest args)
+:   (message "display-buffer called with args %S" args)
+:   (let ((res (apply orig-fun args)))
+:       (message "display-buffer returned %S" res)
+:       res))
+: (advice-add 'display-buffer :around #'his-tracing-function)
+여기서 his-tracing-function이 원래 의도한 display-buffer 함수 대신 호출되며 원래 함수 자체가 인자로 전달된다. 더 이상 이와 같은 트레이싱을 원하지 않을 경우
+: (advice-remove 'display-buffer #'his-tracing-function)
+으로 되돌릴 수 있다.
+*** Declaring Functions Obsolete
+*** Inline Functions
+인라인 함수는 보통의 함수와 같이 동작한다. 다만, 함수에 대한 호출을 바이트 컴파일 할 떄, 함수를 정의한 코드가 호출하는 곳으로 삽입(확장)된다.
+인라인 함수를 정의하는 간단한 방법은 defun 대신 defsubst를 사용하는 것이다.
+인라인 함수를 만드는 것은 종종 좀 더 빠른 함수 호출을 가능하게 한다. 그러나, 단점이 있는데 함수의 정의가 변경된 경우 재컴파일을 해야 적용이 되며, 크기가 큰 함수에 적용하는 경우 바이트 컴파일 코드 및 메모리가 증가한다. 또한 디버깅, 트레이싱, 애드버타이징 등에 적용시 문제가 되므로 속도에 민감하지 않다면 작은 함수라도 인라인 적용을 하지 않는 것을 추천한다.
+*** The =declare= Form
+=declare= 는 함수 또는 매크로에 메타 속성을 추가하기 위해 사용되는 특수한 매크로이다.
+declare 폼은 defun or defsubst, defmacro 정의시 인자로 전달되며, (property args...) 형태를 가지며 여기서 property는 다음과 같은 것이 가능하다.
+(advertised-calling convention signature when)
+(debug edebug-form-spec)
+(doc-string n)
+(indent indent-spec)
+(interactive-only value)
+(obsolete current-name when)
+(compiler-macro expander)
+(gv-expander expander) ;; gv stands for generalized variable
+(gv-setter setter)
+*** Telling the Compiler that a Function is Defined
+(declare-function function file &optional arglist fileonly)
+*** Determining whether a Function is Safe to Call
+** Macros
+*** Defining Macros
+*** Common Problems Using Macros
+** Customizing Settings
+Emacs 사용자는 Lisp 코드를 작성하지 않고 변수 및 페이스(faces)를 커스터마이징할 수 있다.
+커스터마이징 인터페이스: =defcustom= 으로 정의된 변수 및 =defface= 로 정의된 페이스들 그리고 =defgroup= 으로 정의된 커스터마이징 그룹들
+*** Common Item Keywords
+여기서 설명된 키워드들은 커스터마이제이션 선언시 활용된다. 커스터마이제이션용 메뉴 및 버퍼에 아이템을 추가/변경하는 것이 가능하다.  :tag를 제외하고 모든 키워들은 중복해서 정의될 수 있다. :tag 키워드는 예외적인데 주어진 아이템은 단지 하나의 이름만을 표시할 수 있기 때문이다.
+- :tag label
+  아이템의 이름 대신에 문자열 label을 사용함, 아이템의 실제 이름과 본질적으로 너무 다른 태그를 사용하지 말 것.
+- :group group
+  해당 group의 커스터마이징 아이템으로 넣을 것. 만약 이 키워드가 주어지지 않으면 마지막으로 정의된 같은 그룹에 적용이 된다. :defgroup에 이 키워드가 정의되면 해당 그룹의 서브그룹에 해당함.
+- :link link-data
+  해당 아이텡에 대한 설명에 해당하는 문자열 이후 외부 링크를 포함함. 이것을 다른 문서를 참조하는 버튼을 포함하는 문장으로 표현됨.
+  link-data로 활용될 수 있는 여러가지 경우가 있는데, 이는 (custom-manual info-node), (info-link info-node), (url-link url), (emacs-commentary-link library), (emacs-library-link library), (file-link file), (function-link function), (variable-link variable), (custom-group-link group) 등을 포함한다.
+  (info-link :tag "foo" "(emacs)Top")과 같이 :tag name을 추가하여 커스터마이제이션 버퍼에 사용될 텍스트를 명시할 수 있다. 이멕스 매뉴얼에 대한 링크를 버퍼에 나타나게 할 수 있다. 'foo'라는 링크 네임을 가지고.
+- :load file
+  해당 커스터마이제이션 아이템을 표시하기 전에 파일을 로드함.
+- :require feature
+  해당 아이템의 값을 커스터마이징할 때 (require 'feature)를 수행한다. 여기서 feature는 심볼이 되어야 한다. :require를 사용하는 이유는 어떤 변수가 minor mode와 같은 기능을 가능하게 할때 단지 변수만 설정하는 것은 어떤 효과도 낼 수 없기에 그 기능을 구현한 코드가 로드되어야 한다.
+- :version version
+- :package-version '(package . version)
+*** Defining Customization Groups
+각 Emacs Lisp 패키지는 모든 옵션 및 페이스, 다른 그룹을 포함하는 하나의 메인 커스터마이제이션 그룹을 가져야 한다. 만약 패키지의 옵션이나 페이스의 수가 작다면 하나의 그룹만 사용해도 되지만 20개 이상일 경우 서브그룹으로 구조화하고 그것들은 하나의 메인 그룹에 배치하는 것이 좋다. M-x Customize를 통해서 전체 리스트를 표시할 수 있다.
+- defgroup group members doc [keyword value]...
+  여기서 members는 그룹의 멤버가 되는 커스터마이제이션 아이템들의 초기 집합을 명시하는 리스트임. 그러한 멤버를 정의할 때 :group 키워드를 사용하므로서 그룹의 멤버를 명시한다.
+*** Defining Customization Variables
+사용자 옵션인 커스터마이저블 변수는 글로벌 Lisp 변수로 그 것의 값은 커스터마이즈 인터페이스를 통해서 설정될 수 있다. =defvar= 로 정의되는 다른 글로벌 변수와 다른게 =defcustom= 매크로로 정의되며 =defvar= 서브루틴으로 호출하는 것 뿐만 아니라 변수의 어떻게 커스터마이즈 인터페이스에서 표시되어야 하는지, 그것이 가질 수 있는 값들이 어떤 것들인지를 설명한다.
+- defcustom option standard doc [keyword value]...
+  여기서 standard는 옵션에 대한 표준 값을 명시하는 표현식으로 =defcustom= 을 해석할 때 평가되지만 그 값으로 바인드될 필요는 없다. 만약에 옵션이 기본값을 가지면 변경되지 않는다. 만약에 사용자가 이미 옵션에 대한 커스터마이제이션을 저장했다면 사용자가 정한 값으로 기본값이 인스톨된다. 그렇치 않으면, standard를 평가한 결과가 기본값이 된다. =defvar= 와 같이 옵션은 특별한 변수로 마킹되기에 항상 동적으로 바인드된다. 만약에 옵션이 이미 렉시컬로 바인된다면 해당 렉시컬 바인딩은 바인딩 구조에서 벗어날 떄까지 유효하다. 다양한 경우에 standard에 대한 평가가 진행될 수 있기에 언제라도 평가가 가능하도록 무겁지 않아야 한다.
+  만약에 =defcustom= 에서 :group을 명시하지 않으면 같은 파일안에서 =defgroup= 으로 정의된 마지막 그룹이 사용될 것이다. 그렇기에, 대부분의 defcustom은 명시적으로 :group을 지정하지 않는다.
+  공통적으로 사용되는 키워드 외에 하기와 같은 키워드가 추가로 정의될 수 있다.
+  - :type type
+  - :options value-list
+  - :set setfunction
+  - :get getfunction
+  - :initialize function
+  - :local value
+    value가 t이면 옵션을 자동적으로 버퍼 지역변수로 마크한다. 만약 permanent이면 옵션을 =permanent-local= 속성을 t로 설정한다.
+  - :risky value
+    =risky-local-variable= 속성을 value로 설정한다.
+  - :safe function
+    =safe-local-variable= 속성을 function으로 설정한다.
+  - :set-after variables
+다음 예는 :require 키워드를 사용하는 옵션이다. 옵션이 설정될 떄 해당 기능이 로드되지 않았을 경우 로드를 한다.
+: (defcustom frobnicate-automatically nil
+:   "Non-nil means automiatically frobnicate all buffers."
+:   :type 'boolean
+:   :require 'frobnicate-mode
+:   :group 'frobnicate')
+만약에 커스터마이제이션 아이템이 :options 를 지원하는 hook 나 alist 와 같은 타입을 가지면, =custom-add-frequent-value= 를 사용하여 defcustom 선언 이후에 해당 리스트에 추가적인 값들을 추가할 수 있다.
+: (custom-add-frequent-value 'emacs-lisp-mode-hook
+:   'my-lisp-mode-initialization)
+내부적으로 defcustom은 표준값에 대한 표현식을 기록하는 =standard-value= 심볼 속성과 커스터마이제이션 버퍼에 사용자에 의해서 저장된 값을 기록하기 위한 =saved-value= 속성, 아직 저장되지 않은 상태에서 사용자가 설정한 값을 기록하고 있는 =customized-value= 속성 등을 유지한다.
+- custom-reevaluate-setting symbol
+- custom-variable-p arg
+*** Customization Types
+=defcustom= 정의시 :type 키워드를 활용하여 커스터마이제이션 타입을 설정한다. :type의 인자는 defcustom이 해석될 때 한번 평가되기에 그 값이 평가되는 시점에 따라서 변화되는 것은 바람직하지 않다. 보통 quoted constant 를 사용한다.
+: (defcustom diff-command "diff"
+:   "The command to use to run diff"
+:   :type '(string')
+:   :group 'diff)
+일반적으로 타입은 리스트이며, 첫번째 리스트 항목은 다음 섹션에서 정의된 타입중에 하나인 타입 심볼을 가지고 그 심볼에 따라서 연관된 인자가 리스트 항목으로 따라 온다. 타입 심볼과 그것의 인자들 사이에 선택적으로 키워드-값의 쌍이 추가될 수 있다. 인자가 없는 타입 심볼을 단순 타입으로 어떤 키워드-값 쌍을 사용하지 않는다면 괄호 없이 타입 심볼만 표기될 수 있다. 예를 들어, 단순 스트링 타입일 경우 (string)은 string 과 같다. 모든 커스터마이제이션 타입은 위짓(widgets)으로 구현된다.
+**** Simple Types
+- sexp
+  인쇄될 수 있으며 다시 읽을 수 있는 임이의 Lisp 객체를 값으로 가질 수 있는 타입이다. 어떤 옵션에 대하여 세부적인 타입을 고려하지 않을 경우 대안(fall-back)으로 sexp를 사용할 수 있다.
+- integer
+- number
+- float
+- string
+- regexp
+- character
+- file
+- (file :must-match t)
+  존재하는 파일의 이름이어야 한다.
+- directory
+- hook
+  함수들의 리스트가 되며, hook 변수를 위해 사용된다. 이러한 hook에 사용되기 위해 추천된 함수들의 리스트를 명시하려면 defcustom 정의시 :options 키워드를 사용한다.
+- symbol
+- function
+- variable
+- face
+- boolean
+- key-sequence
+  키순서를 값으로 하며, =kbd= 함수와 같은 문법을 사용하여 키순서를 표시한다.
+- coding-system
+- color
+  유효한 색상 이름.
+**** Composite Types
+단순 타입으로 정의하기 어려운 경우 기본 타입을 조합한 복합 타입을 정의한다. 세부적인 타입 및 데이터는 그 복합 타입의 인자가 된다.
+: (constructor arguments...)
+: (constructor {keyword value}... arguments...)
+- (cons car-type cdr-type)
+  (cons string symbol) 과 같은 복합 타입은 ("foo" . foo) 와 같은 값을 가진다. 커스터마이제이션 버퍼에서는 CAR 와 CDR 이 표시되며 세부 타입에 따라서 개별적으로 편집될 수 있다.
+- (list elemnet-types...)
+  에를들면, (list integer string function)
+- (group element-types...)
+- (vector element-types...)
+- (alist :key-type key-type :value-type value-type)
+  cons-cells 객체의 리스트로 주어지며, key-type과 value-type이 명시되지 않는 경우 기본으로 sexp 로 취급된다.
+  :options 키워드로 합당한 키에 대한 스팩 리스트가 져야 한다. 이렇한 키는 커스터마이제이션 버퍼에 채크박스 형태로 나타나며 사용자는 해당 키에 대한 포함 여부를 채크할 수 있다.
+  : :options '("foo" "bar" "baz")
+  위와 같은 옵션이 주어진 경우 3가지 알려진 키가 먼저 리스트 된다.
+  : :options '("foo" ("bar" integer) "baz")
+  위과 같이 특정 키에 대한 값을 제한할 수 있다. "bar" 키는 정수값을 가진다.
+  : :options '("foo"
+  :             ((function-item some-function) integer)
+  :             "baz")
+  alist 타입의 예는 다음과 같다.
+  : (defcustom list-alist '(("foo" 1) ("bar" 2) ("baz" 3))
+  :     "Each element is a list of the form (KEY VALUE)."
+  :     :type '(alist :value-type (group integer)))
+  많은 값을 가지는 키의 경우,
+  : (defcustom person-data '(("brian" 50 t)
+  :                          ("dorith" 55 nil)
+  :                          ("ken" 52 t))
+  :     "Alist of basic info about people.
+  :      Each element has the form (NAME AGE MALE-FLAG)."
+  :     :type '(alist :value-type (group integer boolean)))
+- (plist :key-type key-type :value-type value-type)
+  alist와 유사하나, 1) 해당 정보는 속성 리스트에 저장되며 2) key-type이 빠진 경우, 기본이 sexp가 아닌 symbol 이다.
+- (choice alternative-types)
+  (choice integer string) 과 같이 정수 또는 문자열을 선택할 수 있다. 커스터마이제이션 버퍼에서 메뉴로 표시되며, 선택후에 해당 타입의 값을 설정할 수 있다.
+  보통 메뉴의 스트링은 자동적으로 타입이름을 결정되지만 아래와 같이 :tag 키워드를 추가하여 메뉴 표시 문자열을 변경할 수 있다.
+  : (choice (integer :tag "Number of spaces")
+  :         (string :tag "Literal text"))
+  :value 키워드를 추가하여 기본값을 설정할 수 있다.
+  만약에 특정 값이 여러개의 선택가능한 타입에 나타날 수 있는 경우 가장 구체적인 타입이 먼저 리스트업되고 일반적인 것이 마지막에 리스트업된다.
+  nil 이 심볼에 중복되는 경우,
+  : (choice (const :tag "Off" nil)
+  :     symbol (sexp :tag "Other"))
+  이 경우 nil 값은 다른 심볼과 같이 취급되지 않으며, 심볼은 다른 Lisp 표현식과 같이 취급되지 않는다.
+- (radio element-types...)
+  choice 와 같으나 메뉴가 아닌 라디오 버튼으로 표시된다.
+- (const value)
+  :tag 는 종종 const와 같이 사용된다. 다음과 같이,
+  : (choice (const :tag "Yes" t)
+  :         (const :tag "No" nil)
+  :         (const :tag "Ask" foo))
+- (other value)
+- (function-item function)
+- (variable-item variable)
+- (set types...)
+  채크 리스트로 표시되며 각 타입의 항목이 포함되거나 제외될 수 있다.
+  : (set (const :bold) (const :italic))
+  : (set (cons :tag "Height" (const height) integer)
+  :            :tag "Width" (const width) integer))
+  사용자는 높이값 및 넓이값을 선택적으로 포함한다.
+- (repeat element-type)
+  element-type 타입을 갖는 요소를 가진 리스트이며, 리스트의 엘리먼트는 '[INS]' 와 '[DEL]' 버튼으로 추가 및 삭제될 수 있다.
+- (restricted-sexp :match-alternatives criteria)
+  : (restricted-sexp :match-alternatives
+  :                 (integerp 't 'nil))
+다음은 복합 타입을 다룰 때 키워드-값 쌍에서 사용될 수 있는 키워드이다.
+- :tag tag
+- :match-alternatives criteria
+- :args argument-list
+**** Splicing into Lists
+**** Type Keywords
+타입 심볼이후에 추가 될 수 있는 키워드-값 쌍에 대하여 나열하면 하기와 같다.
+- :value default
+- :format format-string
+  해당 타입의 값을 버퍼에 표기하기 위해 사용됨. '%' 이스케이프가 포맺 스트링에 사용된다.
+  '%[button%]' 버튼으로 마크된 텍스트 button을 표기한다.
+  '%{sample%}' :sample-face 에 의해서 명시된 특별한 페이스로 표현된 sample을 보여 준다.
+  '%v' 아이템의 값을 대치함
+  '%d' 문서화를 위한 문자열로 대치됨
+  '%h' 문서화 문자열이 하나 이상의 라인으로구성된 경우 모두 표시할지 아닐지를 나타내는 show/hide 텍스트 버튼으로 대치됨
+  '%t' :tag 키워드로 명시된 텍스트로 대치됨
+  '%%' '%'로 대치됨
+- :action action
+  버튼 클릭시 action이 수행됨
+- :button-face face
+  버튼 테스트 표시에 대한 페이스를 지정함
+- :button-prefix prefix
+- :buffon-suffix suffix
+- :tag tag
+- :doc doc
+- :help-echo motion-doc
+- :match function
+- :match-inline function
+- :validate function
+**** Defining New Types
+=define-widget= 을 이용하여 새로운 타입을 정의한다.
+*** Applying Customization
+사용자가 커스텀 설정을 하여 저장하게 되면 custom-set-variables 및 custom-set-faces 폼이 커스텀 파일에 작성이 된다. 이멕스가 다시 시작할 때 커스텀 파일이 해석이 되어 적용이 된다.
+- custom-set-variables &rest args
+  args의 항목은 (var expression [now [request [comment]]]) 형식의 리스트이며, 여기서 var는 커스텀 변수에 대한 심볼이며, expression은 커스텀 값을 평가하는 표현식이다.
+  만약에 해당 커스텀 변수에 대한 =defcustom= 이 custom-set-variables 호출 이전에 이미 평가되었다면 expression은 즉시 평가되어 결과를 커스텀 변수의 값으로 설정이 된다. 그렇치 않은 경우, expression 자체가 그 커스텀 변수의 saved-value 특성값으로 저장이 되고 나중에 defcustom이 해석될 떄 평가되어 반영된다.
+  옵션의 now, request, comment는 내부 목적으로 사용되며 now가 non-nil이면 해당 값이 바로 적용이되며, request는 즉시 로드될 기능피쳐의 리스트이다.
+- custom-set-faces &rest args
+  args의 항목은 (face spec [now [comment]]) 형식의 리스트이다.
+*** Custom Themes
+설정이 Enable되거나 Disable되는 것들을 하나의 단위로 묶어서 커스텀 테마를 정의할 수 있다.
+foo-theme.el 파일로 정의가 되며 여기서 foo는 테마 이름이다. =deftheme= 으로 정의하며 그 파일의 마지막 폼은 =privide-theme= 을 호출하는 것이 되어야 한다.
+- deftheme theme &optional doc
+- provide-theme theme
+deftheme과 provide-theme 사이에 테마를 설정하는 폼이 오게 된다.
+- custom-theme-set-variables theme &rest args
+- custom-theme-set-faces theme &rest args
+다음 함수는 테마를 프로그래믹하게 제어하기 유용하다.
+- custom-theme-p theme
+- custom-known-themes
+  (user changed)
+- load-theme theme &optional no-confirm no-enable
+  custom-theme-load-path 하에서 theme 파일을 로드한다.
+- enable-theme theme
+- disable-theme theme
+** Loading
+** Byte Compiliation
+** Debugging Lisp Programs
+** Reading and Printing Lisp Objects
+프린팅과 리딩은 Lisp 객체를 텍스트 폼으로 변경하거나 반대로 변환하는 것이며, Lisp 읽기 함수(예, read, read-string etc)가 프로그램 읽어 들이기 위해서는 미리 Lisp 객체를 텍스트로 어떤 형식에 따라서 표현해야 하는지 정해져야 한다. 이러한 Lisp 객체의 텍스트 표현 규칙을 읽기 문법(Read Syntax)라고 한다. Lisp 출력 함수(예, print, prin1, princ etc)는 Lisp 객체를 텍스트 형태로 출력하는데, 대부분의 경우 읽기 문법에 준하는 형태로 출력이 이루어지기에 읽기 함수를 통해서 다시 읽어서 동일한 Lisp 객체를 얻을 수 있다. 출력이된 Lisp 객체를 다시 읽어 들이지 못하는 몇가지 예외가 존재하는데 이는 buffer, marker 등과 같은 객체는 단순하지 않고 객체의 속성 자체가 복잡하기에 텍스트 형태로 표현하는데 문제가 있기에 단순히 사람이 이해할 수 있는 정도로 #<...> 형태로 출력이 된다[fn:: 필요성이 얼마나 있는지는 잘 모르겠지만 프린팅과 리딩에 대한 상화 변환이 지원되지 않는 객체에 대해서 저장하거나 나중에 다시 읽어 들이기 위해서는 직렬화/반직열화(serialization/de-serialization) 등을 생각해 볼 수 있다.]
+Lisp 객체에 대한 I/O를 다루는데 있어서 또 하나의 중요한 개념은 스트림(streams)이다. 스트림은 주어진 I/O 소스에 대하여 읽기에 있어서 어느 위치부터 시작할 것인지, 프린팅을 할 경우 어디에 출력을 할 것인지 등을 다루 수 있게 해 준다.
+*** Introduction to Reading and Printing
+'(a . 5)'와 같은 텍스트는 cons cell 객체에 대한 읽기문법에 해당한다. 그 것의 CAR는 심볼 a 이며 CDR은 숫자 5가 된다.
+리딩과 프린팅은 역동작이라 할 수 있다, 즉 어떤 객체를 텍스트로 출력한 것을 다시 읽어어 들이면 동일한 값을 가지 유사한 객체을 얻을 수 있다. 그러나, 다음과 같은 예외적인 경우가 있기에 정확하게 상호간의 역함수 관계를 갖는 다고 할 수는 없다.
+- 읽어 들일 수 없는 텍스트를 출력하는 경우. 예를 들면 buffers, windows, frames, subprocesses 그리고 markers 등은 '#'로 시작하는 텍스트로 프린트된다. 이러한 택스트를 읽을 려고 하면 오류가 난다. 이러한 데이터 타입을 읽어 들일 수 있는 방법은 없다.
+- 어떤 객체는 여러가지 텍스트 형태로 표현될 수 있다. 예를 들면, '1' 과 '01' 표현은 같은 정수이며 '(a b)'와 '(a . (b))'는 같은 리스트이다. 리딩의 경우 여러가지의 형태에 대하여 읽는데 문제가 없을 것이나 프린팅의 경우 하나를 선택해야 한다.
+- 코멘트가 존재할 경우. 객체를 읽는 중간에 코멘트가 있을 수 있다. 읽는 데 영향을 주지 않치만 출력된 형태와 다를 수 있다.
+*** Input Streams
+텍스트를 읽기 위한 Lisp 함수 대부분은 스트림을 인자로 취한다. 입력 스트림은 어디에서 어떻게 텍스트 문자를 읽어야 하는지 명시한다. 가능한 입력 스트림은 하기와 같다.
+- buffer
+  입력 문자는 버퍼로 부터 읽혀진다. 포인트이후의 객체로 사작하며, 포인트는 문자를 읽으면서 앞으로 이동한다.
+- marker
+  마커가 있는 버퍼로 부터 문자를 읽는다. 마커 포지션은 문자를 읽은 만큼 앞으로 전진한다. 버퍼의 포인트 값은 영향을 받지 않는다.
+- string
+  스트링으로 부터 문자를 읽어는다. 스트링의 첫번째 문자로 시작하여.
+- function
+  함수에 의해서 입력 문자가 생성되며 두가지 종류의 호출을 지원한다.
+  + 인자 없이 함수가 호출될 경우, 그 함수는 다음 문자를 반환한다.
+  + 하나의 인자(항상 문자임)로 호출될 경우, 함수는 해당 인자를 저장하고 다음번 호출시 그것을 반환한다. 해당 문자를 언리딩(unreading)한다고 하며, 리더가 특정 문자를 너무 많이 읽을 경우 다시 그것을 되돌리려고 할떄 일어 난다. 이 경우 함수가 반환하는 값에는 변화가 없다[fn:: pushback reader가 필요할 경우를 의미함. 구분 해석을 하는데 있어서 한번 읽은 문자를 다시 되돌려서 다른 패턴인지 검사할 경우가 종종 필요하다.]
+- t
+  t는 입력이 minibuffer로 부터 진행될 경우 스트림으로 사용된다. 사실 미니버퍼는 한번 호출되고 사용자에 의해서 입력된 텍스트가 입력 스트림으로 사용될 스트링이 된다. 만약에 Emacs가 배치모드(batch mode)로 동작할 경우 미니버퍼 대신 표준입력(standard input)이 스트림으로 사용된다.
+  : (message "%s" (read t))
+- nil
+  입력 스트림으로 nil이 주어진 경우 표준입력의 값이 스트림으로 사용된다. 이 값은 기본 입력 스트림이며 non-nil 입력 스트림이 되어야 한다.
+- symbol
+  입력 스트림으로서 심볼은 그 심볼의 함수 정의와 동일하다.
+예를 들면,
+: (setq m (set-marker (make-marker) 1 (get-buffer "foo"))) ;; assume "foo" buffer having "This ..."
+:   => #<marker at 1 in foo>
+: (read m)
+:   => This
+: m
+:   => #<marker at 5 in foo> ;; Before the first space
+: (read "(When in) the course")
+:   => (When in)
+*** Input Functions
+하기 읽기 함수에서 스트림 인자가 생략되거나 nil인 경우 표준입력의 값이 스트림으로 사용된다.
+만약에 리딩시 unterminated list, vector, or string이 오면 =end-of-file= 오류가 발생한다.
+- read &optional stream
+- read-from-string string &optional start end
+  스트링에서 첫번쨰 택스트 형태의 Lisp 표현식을 읽고 cons cell을 반환하는데, 그 것의 CAR는 읽어 들인 표현식이며 CDR은 해당 스트링에서 다음에 읽어야 할 문자의 위치를 나타내는 정수값이 된다. 만약에 start가 부여되며 그 곳부터 읽기가 시작되고 end가 부여되면 거기까지만 읽기 동작이 수행된다.
+  예를 들면,
+  : (read-from-string "(setq x 55) (setq y 5)")
+  :     => ((setq x 55) . 11)
+  : (read-from-string "\"A short string\"")
+  :     => ("A short string" . 16)
+  : ;; Read starting at the first character.
+  : (read-from-string "(list 112)" 0)
+  :     => ((list 112) . 10)
+  : ;; Read strating at the second character.
+  : (read-from-string "(list 112)" 1)
+  :     => (list . 5)
+  : ;; Read starting at the seventh character, and stopping at the ninth)
+  : (read-from-string "(list 112)" 6 8)
+  :     => (11 . 8)
+- stardard-input
+  기본 입력 스트림을 가지는 변수이다. 기본값이 t이면 미니버퍼 사용을 의미한다.
+- read-circle
+  이 변수가 non-nil이면 순환참조 및 공유된 구조에 대한 읽기를 허용한다.
+- set-binary-mode stream mode
+  바이너리 또는 텍스트 I/O 모드를 변경한다. 모드가 non-nil이면 바이너리 모드가 된다. 인자인 스트림은 stdin, stdout, stderr 중에 하나가 될 수 있다.
+*** Output Streams
+출력 스티림은 프린팅에 의해서 생성된 문자들과 연관된 것을 명시한다. 대부분의 프린트 함수는 옵션인자로 출력 스트림을 가진다. 가능한 출력 스트림은 하기와 같다.
+- buffer
+  출력 문자들은 버퍼에 현재 포인트 위치에 삽입된다. 포인트는 삽입된 문자수 만큼 앞으로 전진한다.
+- marker
+  해당 마커를 가진 버퍼의 마커 포지션에 출력 문자를 삽입한다. 마커 포지션은 삽입한 문자수 만큼 앞으로 전진한다. 버퍼의 포인트는 변화가 없으나 만약에 마커 포지션이 포인트의 앞 또는 같은 곳에 있다면 포인트는 그 만큼 앞으로 전진한다.
+- function
+  출력 문자는 함수로 전달되며, 함수는 하나의 문자를 인자로 받는다. 출력될 문자수 만큼 호출되며 해당 문자들은 어디에 넣을 것인지 함수내에서 결정하여 저장한다.
+- t
+  출력 문자는 에코영역(echo area)에 표시된다. Emacs가 배치모드인 경우 표준출력(standard output)으로 문자가 출력된다.
+- nil
+  기본 출력 스트림으로 표준출력 값이 사용된다.
+- symbol
+  해당 심볼의 함수  정의가 출력 스트림으로 사용된다.
+하기와 같이 external-debugging-output 함수는 디버깅시 사용될 수 있다. 해당 함수는 문자를 표준에러(standard error)로 출력한다.
+: (print "This is the output" #'external-debugging-output)
+*** Output Functions
+Emacs에서 프린팅 함수는 출력에 필여시 제대로 리딩하기 위해 필요한 quoting characters를 추가한다. '"'는 심볼과 스트링을 구분하기 위해서 사용되고, '\'는 스트링 및 심볼에서 구두점(punctuation - comma, period, parathesis etc)이 한정자(delimiters)로 취급되지 않도록 하기 위해서 사용된다. 즉 '\.'은 글자 자체이지 문장종료를 의미하는 한정자가 아니다. 프린팅 함수에 따라서 이러한 quoting을 하여 출력하는 경우와 그렇치 않은 경우가 있다.
+만약에 텍스트가 다시 Lisp으로 리드되어야 하는 경우는 quoting을 하여 출력을 해야 하고, 프로그래머 입장에서 보기 위해서도 마찬가지이지만 일반 사용자를 위한 것이라면 no quoting이 더 나은 선택이다.
+순환 구조를 갖는 객체를 출력할 경우 '#level'에 회귀 참조에 대하여 출력이 된다. '#0'는 level 0 에서의 회귀참조를 가리킨다.
+: (setq foo (list nil))
+:   => (nil)
+: (setcar foo foo)
+:   => (#0)
+출력 함수는 다음과 같다.
+- print object &optional stream
+  객체의 프린트된 형태를 quoting characters을 출력한다. 출력시 앞/뒤로 새로운 라인을 추가한다.
+- prin1 object &optional stream
+  print와 유사하게 동작하나 새로운 라인을 추가하지 않는다.
+- princ object &optional stream
+  이 함수는 사람이 읽기 위하여 출력하는 것이므로 no quoting 을 적용하며 스트링 내용 주위에 더블쿼트를 넣치 않는다. 또한, 새로운 라인도 추가하지 않은다.
+- terpri &optional stream ensure
+  "terminate print"로 스트림에 newline을 추가한다.
+  ensure가 non-nil이고 스트림이 라인의 시작에 이미 있는 경우는 newline을 추가하지 않는다.
+- write-char character &optional stream
+- prin1-to-string object &optinal noescape
+  : (prin1-to-string "foo")
+  :     => "\"foo\""
+  : (prin1-to-string "foo" t)
+  :     => "foo"
+- with-output-to-string body...
+  : (with-output-to-string
+  :     (princ "The buffer is ")
+  :     (princ (buffer-name)))
+  :     => "The buffer is foo"
+- pp object &optional stream
+  prin1과 같지만 줄맞추기 등 사람이 좀 더 읽기 쉽게 출력한다.
+*** Variables Affecting Output
+- standard-output
+- print-quoted
+  non-nil 이면 (quote foo)는 'foo 및 (function foo)는 #'foo 등과 같이 쿼트된 폼을 축약된 형태로 출력한다.
+- print-escape-newlines
+  non-nil 이면 스트링에 있는 newline 문자가 '\n'으로 출력된다. 폼피드는 '\f'로 출력된다. 보통은 이러한 문자는 실재 줄넘김이나 폼피드로 출력된다.
+- print-escape-control-charaters
+- print-escape-nonascii
+- print-escape-multibyte
+- print-charset-text-property
+- print-length
+  리스트 및 벡터에서 출력 가능한 최대수를 지정한다.
+- print-level
+- eval-expression-print-length
+- eval-expression-print-level
+- print-circle
+- print-gensym
+  non-nil 이면 uninterned symbols 즉 심볼 테이블에 등재되지 않는 심볼에 대하여 '#:'을 접두어를 붙여서 출력한다.
+- print-continuous-numbering
+- print-number-table
+- float-output-format
+** Minibuffers
+미니버퍼는 Emacs 커맨드가 사용하는 특수한 버퍼이며, 단순하게 숫자값을 인자로 받는 행위 보다 더 복잡한 입력값을 가는 인자를 읽어들이기 위해서 사용된다. 그런한 인자로는 파일 이름, 버퍼 이름, 그리고 커멘드 이름 (M-x) 등 있으며, 프레임의 하단 라인상에 표시되는데 이는 에코영역(Echo Area)과 같은 위치이지만 인자를 읽어 들이는 동안에 만 미니버퍼로 사용이 된다.
+*** Introduction to Minibuffers
+대부분의 경우에 미니버퍼는 Emacs 버퍼와 동일하게 취급된다. 버퍼내에서 대부분의 동작, 예를 들면, 커맨드를 편집하거나 하는 것들은 미니버퍼에서 보통의 버퍼와 같이 동작한다. 그러나, 버퍼는 관리하는 많은 동작들은 미니버퍼에 적용되지 않는다. 미니버퍼의 이름은 항상 '*Minibuf-~number~' 형태를 가지며 변경이 불가능하다. 미니버퍼는 프레임 하단에 위치한 특별한 윈도우에 표시가 된다. (때때로 어떤 프레임은 미니버퍼가 없는 경우도 있으며 반대로 특별히 미니버퍼만 가지는 프레임도 있다.)
+미니버퍼에 있는 텍스트는 항상 ~prompt string~ 으로 항상 시작하는데, 그것은 사용자에게 어떤 종류의 입력이 필요한지 알려주기 위해서 미니버퍼를 사용하는 프로그램에 의해서 주어진다. 이러한 텍스트는 읽기 전용으로 마크되기에 예기치 않게 그것을 지우거나 변경할 수 없다. 이것은 하나의 필드로 마크되기에 =beginning-of-line=, =forward-word=, =forward-sentence=, =forward-paragraph= 를 포함하여 특정 모션 함수는 프롬프트와 실제 텍스트사이의 경계에서 멈춘다.
+미니버퍼의 윈도우는 보통 싱글 라인이며, 내용이 많이 지면 자동적으로 크기가 늘어난다. 윈도우가 활성상태일 경우 윈도우 크기를 변경하는 커맨드를 사용하여 임시적으로 윈도우 크기를 조정할 수 있다. 미니버퍼 상태가 해제되면 윈도우의 크기는 원래 것으로 되돌아 간다. 미니버퍼가 비활성일 경우 윈도우 크기를 영구적으로 변경할 수 있는데, 윈도우 크기 조절 커맨드를 사용하거나 또는 마우스로 모드라인(mode line)을 끌어서 변경할 수 있다. 만약에 프레임이 미니버퍼만 포함하고 있다면 프레임의 크기를 조절하면 된다.
+미니버퍼는 입력 이벤트를 읽고 =this-command=, =last-command= 와 같은 변수의 값을 변경하는데 사용된다. 만약에 미니버퍼로 하여금 그런한 변수를 변경하는 것을 원하지 않을 경우 미니버퍼를 사용하는 코드 주변에 해당 변수를 별도로 바인딩해야 한다.
+몇몇 상황에서 특정 커맨드가 이미 미니버퍼가 활성화된 상태에서 다시 미니버퍼를 사용하는 경우가 있다. 그러한 미니버퍼는 우리는 재귀적인 미니버퍼(~recursive minibuffer~)라고 한다. 첫번째 미니버퍼는 '*Minibuf-1*'으로 이름이 주어지고, 재귀적인 미니버퍼는 끝에 있는 숫자를 증가하여 이름이 부여된다. =enable-recursive-minibuffers= 라는 변수를 셋팅하거나 커맨드 심볼의 특성 이름으로 해당 변수명을 사용하므로서 허용할 것인지 금지할 것인지 정할 수 있다.
+다름 버퍼와 마찬가지로 미니버퍼는 로컬 키맵(local keymap)을 사용하여 특수한 키바인딩(key binding)을 명시한다. 미니버퍼를 사용하는 함수는 필요한 로컬 키바인딩을 설정한다.
+미니버퍼가 비활성 상태일 경우 그 버퍼의 주모드(major mode)는 =minibuffer-inactive-mode= 가 되며 =minibuffer-inactive-mode-map= 이라는 키맵을 갖는다. 이것은 별도의 프페임에 미니버퍼가 위치할 경우에만 유용하다.
+Emacs 배치모드에서 미니버퍼로 부터 읽기를 요구하는 경우 표준입력으로 부터 라인을 읽게 되며, 특별한 미니버퍼 기능은 사용할 수 없다.
+*** Reading Text Strings with the Minibuffer
+미니버퍼 입력으로 가장 기본적으로 사용되는 함수는 =read-from-minibuffer= 인데, 이것은 택스트 형태의 스트링이나 Lisp 객체를 읽어 들인다. =read-regexp= 함수는 정규식 표현을 읽기 위해서는 사용되는데 그것은 특별한 종류의 스트링이다.
+대부분의 경우 Lisp 함수의 중간에 미니버퍼 입력 함수를 호출하지 말아야 한다. 대신, =interactive= 스팩에 커맨드를 위한 모든 인자를 읽어 들이도록 하는 것이 필요하다.
+- read-from-minibuffer ~prompt~ &optional ~initial keymap read history default inherit-input-method~
+  미니버퍼로 부터 입력을 받는 데 있어서 가장 일반화된 방식을 제공하는 함수이다. 기본적으로 임의의 텍스트를 입력받아서 스트링을 반환한다. 그러나, ~read~ 가 non-nil이면 텍스트를 Lisp 객체로 변환하기 위해서 =read= 함수를 사용한다. 이 함수는 미니버퍼를 활성화시키고 그것에 ~prompt~ 를 표시하며 입력을 대기한다. 사용자가 미니버퍼를 벗어 나기 위한 커맨드를 줄 떄 (엔터키를 눌렀을 때) 이 함수는 미니버퍼에 있는 텍스트로 부터 반환값을 구하는데 보통은 스트링이며 ~read~ 가 non-nil인 경우 아직 평가되지 않은 Lisp 객체를 반환한다.
+  ~default~ 인자는 히스토리 커맨드에서 이용 가능한 기본값을 명시한다. 스트링이거나 스트링의 리스트, 그렇치 않으면 nil이어야 한다. 스트링 및 복수개의 스트링은 미니버퍼의 "futuer history"가 되어 M-n 키를 통해서 사용자에게 이용될 수 있다.
+  만약에 ~read~가 non-nil 일 경우, ~default~ 는 사용자가 입력없이 엔터키를 누르게 되면 =read= 함수의 입력으로 사용된다. 만약에 ~default~ 가 스트링의 리스트인 경우 첫번째 스트링이 입력된다. ~default~ 가 nil 인 경우 빈입력(empty input)은 =end-of-file= 오류를 일으킨다. 그러나 보통의 경우 즉 ~read~ 가 nil 일때, =read-from-minibuffer= 는 사용자가 빈입력을 주면 빈스트링 ""을 반환한다. 이러한 측면에서 여기서 다루는 다른 미니버퍼 입력 함수들과 다르다.
+  ~keymap~ 이 non-nil 이면 그 키맵이 미니버퍼에서 사용되는 로컬 키맵이 되고, ~keymap~ 이 생략되거나 nil 인 경우는 =minibuffer-local-map= 의 값이 키맵으로 사용된다. 키맵을 명시하는 것은 completion과 같은 다양한 응용을 위해서 미니버퍼를 커스터마이징하는 가장 주요한 방법이다.
+  ~history~ 인자는 히스토리 리스트 변수를 지정하는데, 이는 입력을 저장하고 히스토리 커맨드를 위하여 사용된다. 기본은 =minibuffer-history= 변수이다. 옵션으로 히스토리에서의 첫번째 위치를 지정할 수 있다.
+  만약에 =minibuffer-allow-text-properties= 가 non-nil 이면, 반환된 스트링은 미니버퍼에 존재하는 텍스트 속성들이 무엇이건 포함한다. 그렇치 않으면, 모든 텍스트 속성들은 값이 반환될 떄 제거된다.
+  =minibuffer-prompt-properties= 에 있는 텍스트 속성들은 프롬프트에 적용되며 기본적으로 이 속성 리스트는 프롬프트에 대한 페이스를 정의한다. 이 페이스는 존재할 경우 페이스 리스트의 끝에 적용되며 표시전에 머지된다.
+  사용자가 프롬프트의 표출을 제어하기를 원한다면 다음과 같이 모든 페이스 리스트에 =default= 페이스를 명시한다.
+  : (read-from-minibuffer
+  :     (concat
+  :         (propertize "Bold" 'face '(bold default))
+  :         (propertize " and normal: " 'face '(default))))
+  만약에 ~inherit-input-method~ 가 non-nil 이면, 미니버퍼는 현재의 버퍼가 어떤 것이든 간에 그 버퍼의 입력방식 및 =enable-multibyte-characters= 의 설정을 상속받는다.
+  ~initial~ 에 대한 사용은 폐기되었다.
+- read-string ~prompt~ &optional ~initial history default inherit-input-method~
+- read-regexp ~prompt~ &optional ~defaults history~
+- read-regexp-defaults-function
+- minibuffer-allow-text-properties
+- minibuffer-local-map
+- read-no-blanks-input ~prompt~ &optional ~initial~
+- minibuffer-local-ns-map
+*** Reading Lisp Objects with the Minibuffer
+
+*** Minibuffer History
+*** Initial Input
+*** Completion
+*** Yes-or-No Queries
+*** Asking Multiple-Choice Questions
+*** Reading a Password
+*** Minibuffer Windows
+*** Minibuffer Contents
+*** Recursive Minibuffers
+*** Minibuffer Miscellany
+** Command Loop
+** Keymaps
+** Major and Minor Modes
+** Documentation
+** Files
+** Backups and Auto-Saving
+** Buffers
+** Windows
+** Frames
+** Positions
+** Markers
+** Text
+** Non-ASCII Characters
+** Searching and Matching
+** Syntax Tables
+** Abbrevs and Abbrev Expansion
+** Threads
+** Processes
+** Emacs Display
+** Operating System Interface
+** Preparing Lisp code for distribution
+** Tips and Conventions
+** GNU Emacs Internals
+
+
+
+
+* 버퍼 관련 코드에 대한 이해
+#+BEGIN_SRC emacs-lisp
+(message "hello world!")
+#+END_SRC
+
+#+RESULTS:
+: hello world
+
+#+BEGIN_SRC emacs-lisp
+(message "fill-column: %d" fill-column)
+#+END_SRC
+
+#+RESULTS:
+: fill-column: 80
+
+#+BEGIN_SRC emacs-lisp
+; set function reqruies quoted first argument
+(set 'carnivores '(lion tiger leopard))
+; setq special form add automatically quote to the first argument
+(setq carnivores '(lion tiger leopard))
+(setq trees '(pine fir oak maple)
+      herbivores '(gazelle antelope zebra))
+#+END_SRC
+
+#+RESULTS:
+| gazelle | antelope | zebra |
+
+#+BEGIN_SRC emacs-lisp
+; Do C-x and C-e to evaluate elisp expression in any buffer
+(buffer-name)
+(buffer-file-name)
+; Do C-u, C-x, C-e if you want to print the result beside the expression
+; Use SPC-u instead of C-u in evil mode becasue C-u is used for scroll-up
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(current-buffer)
+(other-buffer)
+(switch-to-buffer (other-buffer))
+(switch-to-buffer (other-buffer (current-buffer) t))
+(buffer-size)
+(point) ;; current position of cursor in the buffer
+(point-min)
+(point-max)
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+; interactive function definition
+; you can call the function as typing C-u 3 M-x multiply-by-seven after evaluating below definition
+; with the prefix number as 3, you will get the result 29
+; you can use the Meta followed by the number in place of C-u followed by the number
+(defun multiply-by-seven (number)  ; Interactive version.
+  "Multiply NUMBER by seven."
+  (interactive "p") ; in here "p" tells Emacs to pass the prefix argument to the function and use its value for the argument of the function
+  (message "The result is %d" (* 7 number)))
+; when the function requires more than one arguments and be interactive,
+; the interative special form expresses multiple prefixes seperated by '\n' in the string form,
+; for example, "p\ncZap To Char: " indicates the first one as a number and the second one as a character with the prompt "Zap To Char: "
+#+END_SRC
+
+#+RESULTS:
+: multiply-by-seven
+
+
+#+BEGIN_SRC emacs-lisp
+(defun simplified-beginning-of-buffer ()
+  "simplified beginning of buffer function"
+  (interactive)
+  (push-mark)
+  (goto-char (point-min)))
+
+(defun mark-whole-buffer-2 ()
+  "sample code"
+  (interactive)
+  (push-mark (point))
+  (push-mark (point-max) nil t)
+  (goto-char (point-min)))
+#+END_SRC
+
+#+RESULTS:
+: mark-whole-region2
+
+* Beginning-of-buffer 함수 이해
+#+BEGIN_SRC emacs-lisp
+
+(defun beginning-of-buffer-2 (&optional arg)
+  "Move point to the beginning of the buffer; leave mark at previous position.
+With \\[universal-argument] prefix, do not set mark at previous position.
+With numeric arg N, put point N/10 of the way from the beginning.
+If the buffer is narrowed, this command uses the beginning and size of the accessible part of the buffer.
+Don't use this command in Lisp programs! \(goto-char (point-min)) is faster and avoids clobbering the mark."
+  (interactive "P")
+  (or (consp arg)
+      (and transient-mark-mode mark-active)
+      (push-mark))
+  (let ((size (- (point-max) (point-min))))
+    (goto-char (if (and arg (not (consp arg)))
+                   (+ (point-min)
+                      (if (> size 10000) ;; Avoid overflow for large buffer sizes!
+                          (* (prefix-numeric-value arg) (/ size 10))
+                        (/ (+ 10 (* size (prefix-numeric-value arg)))
+                           10)))
+                 (point-min))))
+  (if (and arg (not (consp arg))) (forward-line 1)))
+
+#+END_SRC
+
+#+RESULTS:
+: beginning-of-buffer-2
+
+* Kill Ring
+#+begin_src emacs-lisp :tangle yes
+
+(message "kill-ring: \n%s" kill-ring)
+(message "kill-ring-yank-pointer: \n%s" kill-ring-yank-pointer)
+
+#+end_src
+
+* Loops and Recursion
+#+begin_src emacs-lisp :tangle yes
+
+(setq animals '(cat dog tiger lion))
+
+(defun print-elements-of-list (list)
+  "Print each element of LIST on a line of its own."
+  (while list
+    (print (car list))
+    (setq list (cdr list))))
+
+(print-elements-of-list animals)
+
+(defun reverse-of-list (list)
+  (let (value)
+    (dolist (element list value)
+      (setq value (cons element value)))))
+
+(defun reverse-of-list-2 (list)
+  (let (value)
+    (dolist (element list value)
+      (push element value))))
+
+(reverse-of-list animals)
+(reverse-of-list-2 animals)
+
+(defun keep-three-letter-words (word-list)
+  "Keep three letter words in WORD-LIST."
+  (cond
+   ((not word-list) nil)
+   ((eq 3 (length (symbol-name (car word-list))))
+    (cons (car word-list) (keep-three-letter-words (cdr word-list))))
+   (t (keep-three-letter-words (cdr word-list)))))
+
+(keep-three-letter-words '(one two three four five six))
+
+
+(defun triangle-recursively (number)
+  "Return the sum of the numbers 1 through NUMBER inclusive.
+Uses recursion"
+  (if (= number 1)
+      1
+    (+ number
+       (triangle-recursively
+        (1- number)))))
+
+(triangle-recursively 5)
+
+;; No deferment solution: passing result as an argument instead of doing defered operation in resursion
+(defun triangle-initialization (number)
+  "Return the sum of the numbers 1 through NUMBER inclusive.
+This is the initialization component of a two function
+duo that uses recursion"
+  (triangle-recursive-helper 0 0 number))
+
+(defun triangle-recursive-helper (sum counter number)
+  "Return SUM, using COUNTER, through NUMBER inclusive.
+This is the helper component of a two function duo
+that uses recursion."
+  (if (> counter number)
+      sum
+    (triangle-recursive-helper (+ sum counter)
+                               (1+ counter)
+                               number)))
+
+(triangle-initialization 5)
+
+  #+end_src
+
+* Regular Expression Searches
+** sentence-end
+[.?!] not enough because those characters might be shown in a middle of sentence. So those characters should be followed by the end of line or tab or two spaces. Resultantly, the regular expression for sentence end is "[.?!]\\($\\|   \\|  \\)" where \\( and \\| and \\) indicates special characters in regular expression forms. Also a sentence may be followed by one or more carriage returns, like this:
+[
+]*
+Like tabs and spaces, a carriage return is inserted into a regular expression by inserting it literally. The asterisk indicates that the RET is repeated zero or more times.
+But a sentence end does not consist only of a period, a question mark or an exclamation mark followed by appropriate space: a closing quotation mark or a closing brace of some kind may precede the space. Indeed more than one such mark or brace may precede the space. These require a expression that looks like this:
+[]\"')}]* where the first ']' is the first character in the expression; the second character is '"', which is preceded by a '\' to tell Emacs '"' is not special.
+All this suggests what the regular expression pattern for matching the end of a sentence should be; and, indeed, if we evaluate sentence-end we find that it returns the following value:
+    sentence-end
+    => "[.?!][]\"')}]*\\($\\|   \\|  \\)[
+]*"
+
+** re-search-forward
+
+The template for *re-search-forward* looks like this:
+: (re-search-forward "regular-expression"
+:                /limit-of-search/
+:                /what-to-do-if-search-fails/
+:                /repeat-count/)
+
+** forward-sentence
+
+#+begin_src emacs-lisp -n -r :tangle yes
+(defun my-forward-sentence (&optional arg)
+  "Move forward to next end of sentence. With argument, repeat.
+With negative argument, move backward repeatedly to start of sentence.
+
+The variable `sentence-end` is a regular expression that matches ends of
+sentences. Also, every paragraph boundary terminates sentences as well."
+  (interactive "p")                     (ref:interactive)
+  (or arg (setq arg 1))
+  (let ((opoint (point)) (sentence-end (sentence-end)))
+    (while (< arg 0)
+      (let ((pos (point))
+            (par-beg (save-excursion (start-of-paragraph-text) (point))))
+        (if (and (re-search-backward sentence-end par-beg t)
+                 (or (< (match-end 0) pos)
+                     (re-search-backward sentence-end par-beg t)))
+            (goto-char (match-end 0))
+          (goto-char par-beg)))
+      (setq arg (1+ arg)))
+    (while (> arg 0)
+      (let ((par-end (save-excursion (end-of-paragraph-text) (point))))
+        (if (re-search-forward sentence-end par-end t)
+            (skip-chars-backward " \t\n")
+          (goto-char par-end)))
+      (setq arg (1- arg)))
+    (constrain-to-field nil opoint t)))
+
+(my-forward-sentence 2)  (ref:run)
+#+end_src
+in line [[(interactive)]] ..., run my-forward-sentence directly like in line [[(run)][Line (run)]]
+
+** forward-paragraph: a Goldmine of Functions
+
+#+begin_src emacs-lisp :tangle yes
+(defun forward-paragraph (&optional arg)
+  "Move forward to end of paragraph.
+With argument ARG, do it ARG times;
+a negative argument ARG = -N means move backward N paragraphs.
+
+A line which `paragraph-start' matches either separates paragraphs
+\(if `paragraph-separate' matches it also) or is the first line of a paragraph.
+A paragraph end is the beginning of a line which is not part of the paragraph
+to which the end of the previous line belongs, or the end of the buffer.
+Returns the count of paragraphs left to move."
+  (interactive "^p")
+  (or arg (setq arg 1))
+  (let* ((opoint (point))
+         (fill-prefix-regexp
+          (and fill-prefix (not (equal fill-prefix ""))
+               (not paragraph-ignore-fill-prefix)
+               (regexp-quote fill-prefix)))
+         ;; Remove ^ from paragraph-start and paragraph-sep if they are there.
+         ;; These regexps shouldn't be anchored, because we look for them
+         ;; starting at the left-margin.  This allows paragraph commands to
+         ;; work normally with indented text.
+         ;; This hack will not find problem cases like "whatever\\|^something".
+         (parstart (if (and (not (equal "" paragraph-start))
+                            (equal ?^ (aref paragraph-start 0)))
+                       (substring paragraph-start 1)
+                     paragraph-start))
+         (parsep (if (and (not (equal "" paragraph-separate))
+                          (equal ?^ (aref paragraph-separate 0)))
+                     (substring paragraph-separate 1)
+                   paragraph-separate))
+         (parsep
+          (if fill-prefix-regexp
+              (concat parsep "\\|"
+                      fill-prefix-regexp "[ \t]*$")
+            parsep))
+         ;; This is used for searching.
+         (sp-parstart (concat "^[ \t]*\\(?:" parstart "\\|" parsep "\\)"))
+         start found-start)
+    (while (and (< arg 0) (not (bobp)))
+      (if (and (not (looking-at parsep))
+               (re-search-backward "^\n" (max (1- (point)) (point-min)) t)
+               (looking-at parsep))
+          (setq arg (1+ arg))
+        (setq start (point))
+        ;; Move back over paragraph-separating lines.
+        (forward-char -1) (beginning-of-line)
+        (while (and (not (bobp))
+                    (progn (move-to-left-margin)
+                           (looking-at parsep)))
+          (forward-line -1))
+        (if (bobp)
+            nil
+          (setq arg (1+ arg))
+          ;; Go to end of the previous (non-separating) line.
+          (end-of-line)
+          ;; Search back for line that starts or separates paragraphs.
+          (if (if fill-prefix-regexp
+                  ;; There is a fill prefix; it overrides parstart.
+                  (let (multiple-lines)
+                    (while (and (progn (beginning-of-line) (not (bobp)))
+                                (progn (move-to-left-margin)
+                                       (not (looking-at parsep)))
+                                (looking-at fill-prefix-regexp))
+                      (unless (= (point) start)
+                        (setq multiple-lines t))
+                      (forward-line -1))
+                    (move-to-left-margin)
+                    ;; This deleted code caused a long hanging-indent line
+                    ;; not to be filled together with the following lines.
+                    ;; ;; Don't move back over a line before the paragraph
+                    ;; ;; which doesn't start with fill-prefix
+                    ;; ;; unless that is the only line we've moved over.
+                    ;; (and (not (looking-at fill-prefix-regexp))
+                    ;;      multiple-lines
+                    ;;      (forward-line 1))
+                    (not (bobp)))
+                (while (and (re-search-backward sp-parstart nil 1)
+                            (setq found-start t)
+                            ;; Found a candidate, but need to check if it is a
+                            ;; REAL parstart.
+                            (progn (setq start (point))
+                                   (move-to-left-margin)
+                                   (not (looking-at parsep)))
+                            (not (and (looking-at parstart)
+                                      (or (not use-hard-newlines)
+                                          (bobp)
+                                          (get-text-property
+                                           (1- start) 'hard)))))
+                  (setq found-start nil)
+                  (goto-char start))
+                found-start)
+              ;; Found one.
+              (progn
+                ;; Move forward over paragraph separators.
+                ;; We know this cannot reach the place we started
+                ;; because we know we moved back over a non-separator.
+                (while (and (not (eobp))
+                            (progn (move-to-left-margin)
+                                   (looking-at parsep)))
+                  (forward-line 1))
+                ;; If line before paragraph is just margin, back up to there.
+                (end-of-line 0)
+                (if (> (current-column) (current-left-margin))
+                    (forward-char 1)
+                  (skip-chars-backward " \t")
+                  (if (not (bolp))
+                      (forward-line 1))))
+            ;; No starter or separator line => use buffer beg.
+            (goto-char (point-min))))))
+
+    (while (and (> arg 0) (not (eobp)))
+      ;; Move forward over separator lines...
+      (while (and (not (eobp))
+                  (progn (move-to-left-margin) (not (eobp)))
+                  (looking-at parsep))
+        (forward-line 1))
+      (unless (eobp) (setq arg (1- arg)))
+      ;; ... and one more line.
+      (forward-line 1)
+      (if fill-prefix-regexp
+          ;; There is a fill prefix; it overrides parstart.
+          (while (and (not (eobp))
+                      (progn (move-to-left-margin) (not (eobp)))
+                      (not (looking-at parsep))
+                      (looking-at fill-prefix-regexp))
+            (forward-line 1))
+        (while (and (re-search-forward sp-parstart nil 1)
+                    (progn (setq start (match-beginning 0))
+                           (goto-char start)
+                           (not (eobp)))
+                    (progn (move-to-left-margin)
+                           (not (looking-at parsep)))
+                    (or (not (looking-at parstart))
+                        (and use-hard-newlines
+                             (not (get-text-property (1- start) 'hard)))))
+          (forward-char 1))
+        (if (< (point) (point-max))
+            (goto-char start))))
+    (constrain-to-field nil opoint t)
+    ;; Return the number of steps that could not be done.
+    arg))
+#+end_src
+위 소스 코드에 대한 이해, 문단의 분리 및 시작에 대한 패턴 고려, 백워드 방향으로 찾아 가는 경우와 포워드 방향으로 찾아가는 경우 각각에 대한 코드 분석 필요.
+
+* Counting via Repetition and Regexps
+** count-words-example
+The following pattern is considered to search a word in the buffer.
+#+begin_src emacs-lisp :tangle yes
+(re-search-forward "\\w+\\W*")
+#+end_src
+Note that paired backslashes precede the 'w' and 'W'. A single backslash has special meaning to the Emacs Lisp interpreter. It indicates that the following character is interpreted differently than usual. For example, the two characters, '\n', stand for 'newline', rather than for a backslash followed by 'n'. Two backslashes in a row stand for an ordinary, unspecial backslash, so Emacs Lisp interpreter ends for seeing a single backslash followed by a letter. So it discovers the letter is special.
+#+begin_src emacs-lisp :tangle yes
+(defun count-words-example (beginning end)
+  "Print number of words in the region.
+Words are defined as at least one word-consistuent
+character followed by at least one character that
+is not a word-consistuent. The buffer's syntax
+table determines which characters these are."
+  (interactive "r")
+  (message "Counting words in region ... ")
+  ;;; 1. Set up appropriate conditions.
+  (save-excursion
+    (goto-char beginning)
+    (let ((count 0))
+      ;;; 2. Run the while loop
+      (while (and (< (point) end)
+                  (re-search-forward "\\w+\\W*" end t))
+        (setq count (1+ count)))
+      ;;; 3. Send a message to the user
+      (cond ((zerop count)
+             (message
+              "The region does NOT have any words"))
+            ((= 1 count)
+             (message
+              "The region has 1 word."))
+            (t
+             (message
+              "The region has %d words." count))))))
+(global-set-key "\C-x=" 'count-words-example)
+;;;  test -   one two three
+#+end_src
+** Count Words Recursively
+#+begin_src emacs-lisp :tangle yes
+(defun recursive-count-words (region-end)
+  "Number of words between point and REGION-END."
+  (if (and (< (point) region-end)
+           (re-search-forward "\\w+\\W*" region-end t))
+      (1+ (recursive-count-words region-end))
+    0))
+(defun count-words-example-recursive-version (beginning end)
+  "Print number of words in the region.
+Words are defined as at least one word-consistuent
+character followed by at least one character that
+is not a word-consistuent. The buffer's syntax
+table determines which characters these are."
+  (interactive "r")
+  (message "Counting words in region ... ")
+  (save-excursion
+    (goto-char beginning)
+    (let ((count 0))
+      (let ((count (recursive-count-words end)))
+        (cond ((zerop count)
+               (message
+                "The region does NOT have any words"))
+              ((= 1 count)
+               (message
+                "The region has 1 word."))
+              (t
+               (message
+                "The region has %d words." count)))))))
+(global-set-key "\C-x=" 'count-words-example-recursive-version)
+;;;  test -   one two three
+#+end_src
+
+* Counting Words in a =defun=
+I want to count the words and symbols in every definition in the Emacs sources and then print a graph that shows how many functions there are of each length: how many contain 40 to 49 words or symbols, how many contain 50 to 59 words or symbols, and so on. I have often been curious how long a typical function is, and this will tell.
+Let us consider what the steps must be:
+- First, write a function to count the words in one definition. This includes the problem of handling symbols as well as words.
+- Second, write a function to list the number of words in each definition in a file. This function can use the =count-words-in-defun= function.
+- Third, write a function to list the number of words in each function in each of several files. This entails automatically finding the various files, switching to them, and counting the words in the definitions within them.
+- Fourth, write a function to convert the list of numbers that we created in step three to a form that will be suitable for printing as a graph.
+- Fifth, write a function to print the results as a graph.
+** What to Count?
+=count-words-example= is not enough to handle properly this case: it does not count '*' as a word and for example, the function name =multiply-by-seven= is counted by 3, not 1 as a symbol. So need to re-define the regular expression of word-symbol-pattern.
+** What Constitues a Word or Symbol?
+There are two ways to cause Emacs to count 'multiply-by-seven' as one symbol: modify the syntax table or modify the regular expression.
+We could redefine a hyphen as a word constituent character by modifying the syntax table that Emacs keeps for each mode. This action would serve our purpose, except that a hyphen is merely the most common character within symbols that is not typically a word constituent character; there are others, too.
+Alternatively, we can redefine the regexp used in the =count-words-example= definition so as to include symbols. This procedure has the merit of clarity, but the task is a little tricky.
+
+Need to refer Emacs's Syntax Table.
+"\\(\\w\\|\\s_\\)+" matches word-constituent or symbol-constituent characters.
+"\\(\\W\\|\\S_\\)*" matches any character that is either not a word constituent or not a symbol constituent.
+
+I designed a pattern in which the word or symbol constituents are followed optionally by characters that are not white space and then followed optionally by white space.
+Here is the full regular expression:
+:    "\\(\\w\\|\\s_\\)+[^ \t\n]*[ \t\n]*"
+
+#+begin_src emacs-lisp :tangle yes
+(char-to-string (char-syntax ?a))
+(char-to-string (char-syntax ?b))
+(char-to-string (char-syntax ?+))
+#+end_src
+** The =count-words-in-defun= Function
+#+begin_src emacs-lisp :tangle yes
+(defun count-words-in-defun ()
+  "Return the number of words and symbols in a defun."
+  (beginning-of-defun)
+  (let ((count 0)
+        (end (save-excursion (end-of-defun) (point)))) (while
+        (and (< (point) end) (re-search-forward
+                              "\\(\\w\\|\\s_\\)+[^ \t\n]*[ \t\n]*"
+                              end t))
+        (setq count (1+ count)))
+        count))
+;;; Interactive version.
+(defun count-words-defun ()
+  "Number of words and symbols in a function definition."
+  (interactive)
+  (message
+   "Counting words and symbols in function definition ... ")
+  (let ((count (count-words-in-defun)))
+   (cond
+    ((zerop count)
+     (message
+      "The definition does NOT have any words or symbols."))
+    ((= 1 count)
+     (message
+      "The definition has 1 word or symbol.")) (t
+     (message
+      "The definition has %d words or symbols." count)))))
+;;; test
+(global-set-key "\C-x=" 'count-words-defun)
+#+end_src
+** Count Sereral =defuns= Within a File
+#+begin_src emacs-lisp :tangle yes
+(goto-char (point-min))
+(while (re-search-forward "^(defun" nil t)
+  (setq lengths-list
+        (cons (count-words-in-defun) lengths-list)))
+#+end_src
+** Find a File
+Let's look at the source for =find-file=:
+#+begin_src emacs-lisp :tangle yes
+(defun find-file (filename)
+  "Edit file FILENAME.
+Switch to a buffer visiting file FILENAME,
+creating one if none already exists."
+       (interactive "FFind file: ")
+       (switch-to-buffer (find-file-noselect filename)))
+#+end_src
+We do not need to display each file on the screen as the program determines the length of each definition within it. In our case, =set-buffer= is used instead of =switch-to-buffer= after =find-file-noselect".
+** =lengths-list-file= in Detail
+#+begin_src emacs-lisp :tangle yes
+(defun lengths-list-file (filename)
+  "Return list of definitions' lengths within FILE.
+The returned list is a list of numbers.
+Each number is the number of words or
+symbols in one function definition."
+  (message "Working on `%s' ... " filename)
+  (save-excursion
+    (let ((buffer (find-file-noselect filename))
+          (lengths-list))
+      (set-buffer buffer)
+      (setq buffer-read-only t)
+      (widen)
+      (goto-char (point-min))
+      (while (re-search-forward "^(defun" nil t)
+        (setq lengths-list (cons (count-words-in-defun) lengths-list)))
+      (kill-buffer buffer)
+      lengths-list)))
+(lengths-list-file "/usr/local/Cellar/emacs/27.2/share/emacs/27.2/lisp/emacs-lisp/debug.el.gz")
+#+end_src
+** Recursively Count a Words in Different Files
+#+begin_src emacs-lisp :tangle yes
+(defun recursive-lengths-list-many-files (list-of-files)
+  "Return list of lengths of each defun in LIST-OF-FILES."
+  (if list-of-files ; do-again-test
+      (append (lengths-list-file
+               (expand-file-name (car list-of-files)))
+              (recursive-lengths-list-many-files
+               (cdr list-of-files)))))
+(cd "/usr/local/Cellar/emacs/27.2/share/emacs/27.2")
+(lengths-list-file "./lisp/emacs-lisp/debug.el.gz")
+(lengths-list-file "./lisp/emacs-lisp/timer.el.gz")
+(lengths-list-file "./lisp/emacs-lisp/syntax.el.gz")
+
+(recursive-lengths-list-many-files
+ '("./lisp/emacs-lisp/debug.el.gz"
+   "./lisp/emacs-lisp/timer.el.gz"
+   "./lisp/emacs-lisp/syntax.el.gz"))
+#+end_src
+** Prepare the Data for Display in a Graph
+- Sorting list
+- Making a List of Files
+  #+begin_src emacs-lisp :tangle yes
+(defun files-in-below-directory (directory)
+  "List the .el files in DIRECTORY and in its sub-directories."
+  ;; Although the function will be used non-interactively,
+  ;; it will be easier to test if we make it interactive.
+  ;; The directory will have a name such as
+  ;; "/usr/local/share/emacs/22.1.1/lisp/"
+  (interactive "DDirectory name: ")
+  (let (el-files-list
+        (current-directory-list (directory-files-and-attributes directory t)))
+    ;; while we are in the current directory
+    (while current-directory-list
+      (cond
+       ;; check to see whether filename ends in '.el'
+       ;; and if so, add its name to a list.
+       ((equal ".el.gz" (substring (car (car current-directory-list)) -6))
+        (setq el-files-list
+              (cons (car (car current-directory-list)) el-files-list)))
+       ;; check whether filename is that of a directory
+       ((eq t (car (cdr (car current-directory-list))))
+        ;; decide whether to skip or recurse
+        (if
+            (equal "." (substring (car (car current-directory-list)) -1))
+            ;; then do nothing since filename is that of
+            ;; current directory or parent, "." or ".."
+            ()
+          ;; else descend into the directory and repeat the process
+          (setq el-files-list
+                (append (files-in-below-directory
+                         (car (car current-directory-list)))
+                        el-files-list)))))
+      ;; move to the next filename in the list; this also
+      ;; shortens the list so the while loop eventually comes to an end
+      (setq current-directory-list (cdr current-directory-list)))
+    ;; return the filenames
+    el-files-list))
+(setq test-directory "/usr/local/Cellar/emacs/27.2/share/emacs/27.2/lisp")
+(length (directory-files-and-attributes test-directory t))
+(length (files-in-below-directory test-directory))
+(append () '(1 2))
+(equal ".el.gz" (substring "aaa.el.gz" -6))
+(sort (files-in-below-directory test-directory) 'string-lessp)
+(string-lessp "abc" "ac")
+  #+end_src
+- Counting function definitions
+  Let's make a histogram of the lengths of defun in files for given ranges.
+#+begin_src emacs-lisp :tangle yes
+(defvar top-of-ranges-2
+  '(10 20 30 40 50 60 70 80 90 110 120 130 140 150 160 170 180 190 200 210 220 230 240 250 260 270 280 290 300)
+  "List specifying ranges for `defuns-per-range'.")
+
+(defun defuns-per-range (sorted-lengths top-of-ranges)
+  "SORTED-LENGTHS defuns in each TOP-OF-RANGES range."
+  (let ((top-of-range (car top-of-ranges))
+        (number-within-range 0)
+        defuns-per-range-list)
+    ;; Outer loop.
+    (while top-of-ranges
+      ;; Inner loop.
+      (while (and
+              ;; Need number for numeric test.
+              (car sorted-lengths)
+              (< (car sorted-lengths) top-of-range))
+        ;; Count number of definitions within current range.
+        (setq number-within-range (1+ number-within-range))
+        (setq sorted-lengths (cdr sorted-lengths)))
+      ;; Exit inner loop but remain within outer loop.
+      (setq defuns-per-range-list
+            (cons number-within-range defuns-per-range-list))
+      (setq number-within-range 0) ; Reset count to zero.
+      ;; Move to next range.
+      (setq top-of-ranges (cdr top-of-ranges))
+      ;; Specify next top of range value.
+      (setq top-of-range (car top-of-ranges)))
+    ;; Exit outer loop and count the number of defuns larger than
+    ;; the largest top-of-range value.
+    (setq defuns-per-range-list
+          (cons (length sorted-lengths) defuns-per-range-list))
+    ;; Return a list of the number of definitions within each range,
+    ;; smallest to largest.
+    (nreverse defuns-per-range-list)))
+(setq sorted-lengths '(85 86 110 116 122 129 154 176 179 200 265 300 300))
+(defuns-per-range sorted-lengths top-of-ranges-2)
+#+end_src
+** Readying a Graph
+Let's draw text-based graph using '*' character in a column.
+#+begin_src emacs-lisp :tangle yes
+(defvar graph-symbol "*"
+  "String used as symbol in graph, usually an asterisk.")
+
+(defvar graph-blank " "
+  "String used as blank in graph, usually a blank space.
+graph-blank must be the same number of columns wide as graph-symbol.")
+
+(defun column-of-graph (max-graph-height actual-height)
+  "Return list of strings that is one column of a graph."
+  (let ((insert-list nil)
+        (number-of-top-blanks
+         (- max-graph-height actual-height)))
+    ;; Fill in asterisks.
+    (while (> actual-height 0)
+      (setq insert-list (cons graph-symbol insert-list))
+      (setq actual-height (1- actual-height)))
+    ;; Fill in blanks.
+    (while (> number-of-top-blanks 0)
+      (setq insert-list (cons graph-blank insert-list))
+      (setq number-of-top-blanks
+            (1- number-of-top-blanks)))
+    ;; Return whole list.
+    insert-list))
+(column-of-graph 5 3)
+
+(defun graph-body-print (numbers-list)
+  "Print a bar graph of the NUMBERS-LIST.
+The numbers-list consists of the Y-axis values."
+  (let ((height (apply 'max numbers-list))
+        (symbol-width (length graph-blank))
+        from-position)
+    (while numbers-list
+      (setq from-position (point))
+      (insert-rectangle (column-of-graph height (car numbers-list)))
+      (goto-char from-position)
+      (forward-char symbol-width)
+      ;; Draw graph column by column.
+      (sit-for 0)
+      (setq numbers-list (cdr numbers-list)))
+    ;; Place point for X axis labels. (forward-line height)
+    (insert "\n")
+    ))
+
+(graph-body-print '(1 2 3 4 6 4 3 5 7 6 5 2 3))
+#+end_src
+
+* Your .emacs FIle

@@ -1,0 +1,17 @@
+:PROPERTIES:
+:ID:       8609e99a-2253-475c-9eda-671dc5518af3
+:END:
+#+TITLE: GraphQL에 대한 이해
+#+AUTHOR: xroger88
+#+TAGS: graphql sql api resolver
+#+DESCRIPTION: GraphQL 스키마 및 API, 기존 REST API 및 SQL 기반 어플리케이션을 GraphQL 기반으로 재설계 등
+
+
+* Basic References
+- https://medium.com/@__xuorig__/on-graphql-to-sql-146368a92adc
+
+* GraphQL 이란?
+-
+
+* GraphQL Query vs. SQL Query
+-

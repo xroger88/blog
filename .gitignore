@@ -7,3 +7,5 @@
 .#*.scm
 
 /site/
+/.org-mode-reader-cache/
+/posts/.nrepl-port

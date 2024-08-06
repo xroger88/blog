@@ -1,5 +1,4 @@
-
-(define-module (reader)
+(define-module (xroger88 reader org-mode)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-11)
@@ -11,7 +10,7 @@
   #:use-module (haunt post)
   #:use-module (haunt utils)
   #:use-module (haunt reader)
-  #:export (org-reader))
+  #:export (org-mode-reader))
 
 
 (define ox-haunt-base-dir "~/Projects/GuixDev/blog")
@@ -23,7 +22,7 @@
   (format #f "emacs --batch --load ~s --eval ~s ~a --funcall ox-haunt-export-to-html"
           emacs-cmd-load emacs-cmd-eval filepath))
 
-(define (read-org-post port)
+(define (read-org-mode-post port)
   ;; convert org file to html file via emacs ox-haunt
   (let* ((org-file-name (port-filename port))
          (org-file-path (canonicalize-path org-file-name))
@@ -43,6 +42,6 @@
         (values meta-info sxml-data)))
     ))
 
-(define org-reader
+(define org-mode-reader
   (make-reader (make-file-extension-matcher "org")
-               (cut call-with-input-file <> read-org-post)))
+               (cut call-with-input-file <> read-org-mode-post)))

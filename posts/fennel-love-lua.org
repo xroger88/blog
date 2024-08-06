@@ -1,0 +1,37 @@
+#+TITLE: Fennel and Love, Lua
+#+author: xroger88
+#+categories: programming language
+#+tags: lisp game love lua
+#+description: Fennel(Lua) and Love applications
+
+This is a short story about Fennel, love, Lua.
+...
+
+* Reference
+- Fennel - https://fennel-lang.org
+- Love - https://love2d.org/wiki/Getting_Started
+- Raymarching Apps (Andrey Listopadov) - https://andreyorst.gitlab.io/posts/2020-10-15-raymarching-with-fennel-and-love/
+- EXO_encounter_667 Lisp Game Jam 2018 - https://technomancy.us/187
+
+* 용어 정리 (영어 -> 한글)
+- Fennel : aromatic yellow European flower, 페늘
+- Lua : 루아
+- Love : 러브
+- Lisp : 리습, 리스프
+- Clojure : 클로저
+- Clojurescript : 클로저 스크립트
+
+
+* 이멕스에서 페늘 모드 사용하기
+- https://github.com/emacsmirror/fennel-mode
+
+* 시작하며 ...
+루아 언어는 다양한 어플리케이션에 임베드된 스크립트 언어로서 사용이 많이 되고 있으며, 스크립트 언어답게 가볍고 함축된 문장과 표현을 지원하도록 설계된 것이기에 장점이 많은 반면, 언어 측면에서 부족한 부분이 있기에 이를 보완하고자 리습 기반의 표현을 제공하는 페늘 언어(2015년)가 만들어 졌다. 페늘 언어는 리습 언어의 간결함과 Homoiconic 특성(Data is Code)을 제공한다. 리습 언어에서 문장은 없고, 표현(Expression)만 존재하기에 간결하며, 매크로(macro)를 지원하기에 언어의 확장이 가능한 장점이 있다.  페늘 언어를 컴파일하면 루아 언어가 만들어진다. 루아 언어로 프로그래밍한 것 보다 더 최적화된 루아 코드를 생성해 준다.
+
+러브는 루아 기반의 게임 개발 프레이워크이다. 리습의 경우, 오랜 시간에 걸쳐서 게임 프로그래밍에 활용되어 왔기에 페늘과 러브의 조합은 자연스럽게 어울린다는 느낌이 든다. 물론, 페늘이 클로저와 같이 동시성 제어 및 Immutable 지원과 같은 것을 지원하지는 않치만 리습의 문법을 그대로 사용하면서 러브 라이브러리를 이용하여 간단한 게임을 만드는 것은 재미있는 일이다.
+
+Andrey Listopadov는 고전적인 게임에서 3차원 공간을 렌더링하기 위한 고안된 Ray-marching 기법을 페늘 언어 및 러브 게임 프레임워크를 이용하여 구현하였다. 언어 및 프레임워크를 이해하기 위해서 간단한 어플을 작성해 보는 것은 아주 좋은 학습방법이다. 그의 블로그에는 클로저 스크립트를 이용하여 Ray-tracing 기법을 구현한 내용이 있는데, 이 또한 클로저 스크립트를 배우기 위하여 자신이 관심이 있는 하나의 어플을 선택하여 직접 구현해 본 것이다. Ray-tracing 기법과 Ray-marching 기법의 차이 및 상세한 설명은 그의 블로그를 참조하기 바랍니다.
+
+Technomancy의 EXO_encounter_667 게임은 Lisp Game Jam 2018 대회에서 1등을 차지한 게임이다. 페즐과 러브 프레임워크를 활용하여 10일 정도의 시간을 들여서 개발한 게임이며, 코드 변경에 따른 게임의 변화를 REPL 기반으로 게임을 중단하지 않고 반영할 수 있도록 하여 게임 개발에 있어서 REPL 기반 개발이 얼마나 효과적인가를 체험할 수 있다.
+
+Andrey의 Ray-marching 어플을 먼저 이해하고, technomancy의 EXO 게임 코드를 이해할 수 있다면 이 과정을 통해서 페늘 언어 및 러브 프레임워크, 그리고 REPL 기반 게임 개발을 경험할 수 있다.

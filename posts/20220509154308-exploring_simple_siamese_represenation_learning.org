@@ -1,0 +1,21 @@
+#+title: Exploring Simple Siamese Represenation Learning
+#+tags: paper deep-learning
+
+Exploring Simple Siamese Representation Learning
+https://arxiv.org/abs/2011.10566
+
+From Facebook AI Research (FAIR)
+
+* Introduction
+- 비지도/자가학습으로 표현을 러닝하는 데 있어서 일반적으로 샴 네크워크의 형태가 사용된다.
+- 샴 네크워크는 웨이트를 공유하는 신경망으로 두가지 또는 그 이상의 입력에 적용된다.
+- 최근 방법으로 하나의 이미지를 2개의 이미지로 변조하여 입력후 다른 조건하에서 그 유사성을 최대화한다.
+- 문제는 이러한 방식에서 샴 네트워크는 collaping (모든 입력에 대하여 상수를 출력하여 더 이상 학습이 진행이 안되는 상황)하게 되는데, 이를 피하기 위하여 여러가지 방안/전략이 제안되었다.
+  + Contrastive Learning (SIMCLR)
+  + Clustering (SwAV)
+  + BYOL (relies only on positive pairs)
+- 본 논문에서는 위와 같은 전략을 사용하지 않고도 놀랍도록 잘 동작하는 샴 네트워크를 제안한다.
+- 하나의 이미지의 두가지 뷰의 유사성을 극대화하는 모델로서, negative pair 또는 momentum encoder를 사용하지 않는다.
+- 일종의 "BYOL without the momentum encoder"로 생각될 수 있으며, BYOL과 다르게 즉 SimCLR 및 SwAV와 같이 두개의 브랜치 사이에 직접적으로 웨이트를 공유한다.
+- "SimSiam" 은 모델 collapsing을 유발하지 않으며 비교적 좋은 성능을 낸다.
+- Collapsing Soluton이 존재함으로 보이고, Stop Gradient가 이러한 솔루션으로 귀결되는 것을 막아 주는데 중요한 역할을 함을 실험적으로 보인다.

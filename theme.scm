@@ -23,6 +23,7 @@
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-19)
   #:use-module (utils)
+  ;;#:use-module ((jakob utils) #:prefix jakob:)
   #:export (xroger88-theme
             flat-page-template
             static-page
@@ -44,7 +45,7 @@
       (((and paragraph ('p . _)) . _)
        (list paragraph))
       ((head . tail)
-       (cons head (loop tail))))))
+       (loop tail)))))
 
 (define xroger88-theme
   (theme #:name "xroger88"

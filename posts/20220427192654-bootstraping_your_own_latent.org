@@ -1,0 +1,41 @@
+#+title: Bootstraping your own latent
+#+tags: paper
+
+*Bootstrap your own latent: A new approach to self-supervised Learning*
+https://arxiv.org/abs/2006.07733
+
+xxx
+
+* Introduction
+- self-supervised representation learning, which is used as a pre-training for downstream tasks
+- only using positive pairs with two networks: online network and target network
+- online network predicts the output of target network where two augmented images of one image are used as inputs. The idea is that online network is learned to predict the output(i.e. represetation) of target network since two input images are augmented from the same image as positive samples.
+- target network' weights are updated with the moving average of online network's weights. With this, it's not going to a collapse solution as they show empirically.
+
+* Related works
+- there are generative and discriminative approaches. Generative ones are mostly rely on auto-encoding and adversarial learning, where reconstructing images in pixel level is too expensive for representation learning. Among discriminative methods, contrastive methods currently achieve state-of-the-art performace in self-supervised learning.
+- Contrastive approaches avoid a costly generation step in pixel space by bringing representation of different views of the same image closer ('positive pairs'), and spreading representations of views from different images ('negative pairs') apart. Those often require comparing each example with many other examples to work well, prompting the question of whether using negative pairs is necessary.
+- While most RL methods use fixed target networks, BYOL uses a weighted moving average of previous networks in order to provide smoother changes in the target representation.
+- In the semi-supervised setting, an unsupervised loss is combined with a classification loss over a handful of labels to ground the training. Among these methods, =mean teacher(MT)= also uses a slow-moving average network, called =teacher=, to produce targets for an online network, called =students=. An L2 consistency loss between the softmax predictions of the teacher and the student is added to the classification loss.
+- Finally, in self-supervised learning, =MoCo= uses a slow-moving average network (=momentum encoder=) to maintain consistent representations of negative pairs drawn from a memory bank. Instead, BYOL uses a moving average network to produce prediction targets as a means of stabilizing the bootstrap step.
+
+* Method :ATTACH:
+:PROPERTIES:
+:ID:       20467db9-798b-43a1-bf6e-0470b02eb10e
+:END:
+- Many succesfully self-supervised learning approaches build upon the cross-view prediction framework.
+- Many such approaches cast the prediction problem directly in representation space: the representation of an augmented view of an image should be predictive of the representation of another augmented view of the same image.
+- However, predicting directly in representation space can lead to =collapsed representations=: for instance, a representation that is constant across views is always fully predictive of itself.
+- Contrastive methods circumvent this problem by reformulating the prediction problem into one of discrimination: from the representation of an augmented view, they learn to discriminate between the representation of another angmented view of ths same image, and the representations of augmented views of different images. In the vast majority of cases, this prevents the training from finding collapsed representations.
+- Yet, this discriminative approach typically requires comparing each representation of an augmented view with many negative samples, to find ones sufficiently close to make the discrimination task challenging.
+- 본 논문에서는 이러한 콜랩싱을 피하기 위해서 꼭 네가티브 샘플을 활용해야 하는지에 대하여 의문을 가졌다. 즉, 표현 공간에서 당기고 밀고 하는 과정 속에서 콜랩싱은 피할 수는 있지만 너무 많은 비교연산이 필요하기에 다른 대안을 검토하였다.
+- 콜랩싱을 피하기 위하여 단순 명확한 솔루션은 표현 예측에 대한 타겟 생성시 고정된 난수로 초기화된 네트워크를 사용하면 된다. 그러나, 그렇게 하면 콜랩싱을 피할 수 있지만 경험적으로 아주 좋은 표현(값)을 얻지는 못한다. BYOL의 핵심 동기는 타겟(=target=)이라고 하는 주어진 표현으로 부터 온라인(=online=)이라고 하는 새롭고 잠재적으로 향상된 표현을 학습시킬 수 있다는 것. =From there, we can expect to build a sequence of representations of increaing quality by iterating this procedure, using subsequent online networks as new target networks for further training. In practice, BYOL generalizes this bootstraping procedure by iteratively refining its representation, but using slowly moving exponential average of the online network as the target network instead of fixed checkpoints.=
+
+- Model Architecture
+  [[file:../images/2022-04-27_15-03-33_screenshot.png]]
+
+- Pseudo Code (Alogrithm)
+  [[file:../images/2022-04-27_16-04-44_screenshot.png]]
+
+- Experiments
+  [[file:../images/_20220427_212418screenshot.png]]

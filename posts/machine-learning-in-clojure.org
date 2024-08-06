@@ -1,0 +1,85 @@
+#+TITLE: machine learning in clojure
+#+tags: clojure machine-learning
+
+ggg
+
+* Reference
+- https://techascent.com/blog/next-gen-native.html : C 외부 라이이브러이 연동
+- https://github.com/cnuernber/dtype-next/tree/master/examples/clj-ffi
+- https://github.com/cnuernber/avclj
+- https://cnuernber.github.io/dtype-next/index.html : data object alloc/dealloc/conversion/casting etc.
+- https://techascent.github.io/tech.ml.dataset/walkthrough.html : data processing and machin learning library
+- https://github.com/ptaoussanis/nippy : searialization/de-serialization library
+- https://github.com/scicloj/metamorph : machine learning pipeline of scicloj study
+- https://github.com/scicloj/sklearn-clj : libpython-clj 기반으로 sklearn 머신러닝 추론기를 사용할 수 있게 함
+- https://github.com/scicloj/tablecloth :  tech.ml.dataset을 좀 더 쉽게 사용할 수 있도록 한 api 제공 라이브러리
+- https://github.com/scicloj/scicloj.ml : proposal for a clojure machine learning library
+- https://github.com/techascent/tech.ml : Basic machine learning library for use with tech.v3.dataset
+
+* 시작하며 ...
+
+데이터 사이언스에서 클로저 언어의 사용이 확대되기 위하여 필요한 것들이 무엇인지 ???
+클로저 언어의 파워가 충분히 활용될 될 수 있도록 머신러닝 관련 클로저 라이브러리 구축이 절실히 필요한 상황 ...
+일부 라이브러리가 있기는 하지만 지속적인 유지가 안되기에 새로운 접근이 시도되는 상황이 반복되고 있음...
+
+현재 시점에서 머신러닝을 가능하게 하는 필요 라이브러리를 종합하고 코어 역할을 할 수 있는 것들은 하나로 패키징하여 유지/관리하는 것이 필요 하지 않을까?
+그것을 해 보려고 하고, 우선은 TechAscent의 dtype-next(tech.v3.*), tech.ml.dataset 등을 사용해 보고, 이해하고자 하다..
+
+그 동안 자바 에코시스템은 자바가상머신의 테두리내에서 안정적으로 꽤나 발전을 이루었다.
+문제는 다른 언어로 만들어진 좋은 라이브러리를 사용하기에는 비용이 따르기에, 지금까지 애써 외면해 왔다.
+그러나, 파이션을 중심으로 한 머신러닝 분야에서 뒤쳐지는 상황... 외부 라이브러리를 사용하는데 비용을 최소화할 수 있는 방안 없을까?
+이러한 고민에서 네이티브 인터페이스에 대한 재고려가 필요하다는 것을 인식하게 되었다...
+
+데이터 오리엔티드 방식, 즉 맵형식으로 외부 C 라이브러리 바인딩 함수를 표현하고, 이를 FFI(Foreign Function Inteface)로 바꾸어 준다.
+FFI 스팩은 JNA, JDK16, Graal VM 등에 따라서 조금씩 다르기에 이러한 네이티브 바인딩을 생성해 주는 것은 유용하다. ???
+
+Clj-ffi 및 avclj 예제를 통해서 내용을 이해할 필요가 있음..
+클로저 REPL로 외부 라이브러리 바인딩을 테스트해 볼 수 있다..
+
+클로저 기반으로 데이터 사이언스를 대응하고자 하는 노력, 지금의 파이선이 차지하고 있는 영역에 대하여 클로저 장점을 적용하고자 하는 노력.
+등 scicloj 커뮤니티 중심으로 진행되고 있음. 아직 초기 5~6명의 멤버가 활동하는 것으로 보이며, github의 scicloj에 가보면 현재 개발되고 고민하고 있는 내용을 알수 있다.
+관련하여 머신러닝 파이프라인을 구현하고 이를 ML 솔루션으로 제공하는 metamorph 및 scicloj.ml 등에 대하여 탐색해 볼 필요가 있다.
+
+tech.v3.dataset의 경우 그 사용성을 경험해 보니 기존 파이선에서 데이터셋을 다루는 것보다 가독성이 좋고, 무엇보다도 클러저의 간결함화 표현력을 느낄 수 있었다.
+이것을 기반으로 api 수준으로 데이터셋을 다루 수 있도록 tablecloth 라이브러리가 제공된다.
+
+즉, dtype-next -> tech.v3.dataset (tech.ml.dataset) + tablecloth
+    -> metamorph, tech.ml, sklearn-clj -> scicloj.ml 로 확장되면서 빠진 부분을 메워 나가고 있는 상황으로 보인다.
+
+Top-down 방식으로 scicloj.ml 부터 디자인 의도를 파악하면서 연관된 라이브러리에 대한 사용을 학습해야 겠다~~
+
+* Scicloj.ml (in introduction of scicloj.ml user guide)
+- In order to practice machine learning and create an ecosystem of models around it, we need 3 components
+  1. A standard way to manage tabular data in memory
+     *tech.ml.dataset* is a remarkable piece of software, highly optimized and linking in its root to native memory and allow zero-copy integration outside clojure.
+     it's API is functional and complete, but lacks consistency in some parts.
+     This was addressed by an other library, layering on top of it, called *tablecloth*.
+     So we have now a very reliable, mature, easy to use library to store and manipulate tabular data, including text.
+     - What about image data?
+  2. Various machine learning models
+     Models are the core of most machine learning libraries. In scicloj.ml we rely on an common *abstration* for all machine learning models and one Java library *Smile* providing models, which we bridge into Clojure via the abstration. So we use Java models internally, but without the need for Java interop by the user.
+     The abstration is independent from Smile, so we could makes bridge to other libraries, even in non-JVM lanaguages (python, R)
+  3. A standard way to express steps of data manipuliations including train/predict of a model
+     Data transformation pipelines. In order to apply machine learning, the data needs to be transformed from its original form, (often as a data file), into the form required by the model. Sometimes these transformation are simple, like re-encode data, sometimes they are very complex. In some contexts this is as well called *feature engineering*, which can result in arbitray complex dataset transformations. This transformations are mostly dataset to dataset transformations.
+     These pipelines need to be repeatable and self-contained, as they need to run several times with different data or in variants for either cross-validation or hyper-parameter tuning. Clojure and the *tablecloth* library contains already the concept of running a pipeline. These simpler form of a pipeline in Clojure and Tablecloth, can just make use of the fact that all tablecloth functions take a dataset as the first parameter and return a dataset. So they can be chained together with the pipe (*->*) operator of Clojure. However,
+     -> is a marco so we cannot compose piplines easily.
+     We move a dataset object through the pipeline steps so the only object we have nicely inside the pipeline, accessible to all steps, is the dataset itself. But sometimes we need non-tabluar, auxiliary, data to be shared across the pipeline steps, which is not possible with passing a dataset only. Using this simple piplines, would force to hold auxiliary data in a global state of some form. This makes very hard to execute pipelines repeatedly, as they are not self-contained. 파이프라인 스텝을 진행하면서 필요한 보조 데이터에 대한 글로벌 상태를 유지해야 하기에... 문제.
+     These simpler pipeline concepts have no notion of running a pipeline in several modes. In machine learning a pipeline need to behave differently in *fit* and in *transform* (often called *train* and *predict*). The models learn from data in the fit and it applies what it has learned in transform.
+
+     그래서, the idea of the *metamorph* pipeline concept was born. It addresses all three shortcomings of the simpler pipeline.
+     As we see in the metamorph doc, a pipeline can be composed of functions, where adhere to some simple standards regarding input and output, as explained here: https://github.com/scicloj/metamorph#compliant-operations
+     All the steps of a metamorph pipeline are functions which need to follow the following conventions, in order to work well together: Be usual Clojure functions which have at least one parameter, and this first parameter need to be a map as a context map. This map can potentially contain any key. Keys of namespace :metamorph/xxx should be avoided and are reserved for usage by metamorph itself. The value of a compliant function, need to be a function which takes as input the context and which value is the context. The function is allowed to add any keys with any value to the context map, but should not remove any key. The object under :metamorph/data is considered to be the main data object, which nearly all functions will interact with. A functions which only interacts with this main data object, needs nevertheless return the whole context map with the data at key :metamorph/data Each function which reads or writes specific keys to the pipeline context, should document this and use namespaced keys to avoid conflicts Any pipeline function should only interact with the context map. It should neither read nor write anything outside the context. This is important, as it makes the whole pipleine completely self contained, and it can be re-executed anywehere, for example on new data. Pipeline functions should be pure functions.
+
+     Tablecloth contains such operations in the tablecloth.pipeline namespace. All functions of tablecloth.api namespace are replicated there, but metamorph compliant.
+
+  - The Clojure ML ecosystem is based on different libraries working together, as typical and idiomatic in Clojure.
+    Some existing libraries are used interally in scicloj.ml, to create a complete machine learning library, but this is hidden from the user, and is listed here only for completeness.
+    1. tablecloth - for general manipulation of the dataset
+    2. tech.v3.dataset - to finally prepare a dataset for the machine learning models
+    3. metamorph.ml - for running pipelines and machine learning core functions
+    4. Smile - Java data science library containing lots of models
+    In order to give easier access to the various libraries, the scicloj.ml library was created. It unifies the access to the libraries above in three simple namespaces.
+    {:deps {scicloj/scicloj.ml {:mvn/version "0.1.0"}}}
+    scicloj.ml.core - core functionality for machine learning
+    scicloj.ml.dataset - functions to manipulate a dataset
+    scicloj.ml.metamorph - metamorph compliant functions to be used in ml pipelines

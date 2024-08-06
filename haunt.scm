@@ -18,7 +18,8 @@
              (theme)
              (highlight)
              ((redirects) #:prefix xroger88:)
-             (reader)
+             ((xroger88 reader org-mode) #:prefix xroger88:)
+             ((jakob reader org-mode) #:prefix jakob:)
              (utils)
              )
 
@@ -41,7 +42,7 @@
     ("All Posts" "posts.html" ,identity)))
 
 (site #:title "xroger88"
-      #:domain "xroger88.com"
+      #:domain "nationally-stable-sparrow.ngrok-free.app" ;; used in RSS feed .xml
       #:default-metadata
       '((author . "Jongkeun Na")
         (email  . "xroger88@gmail.com"))
@@ -51,7 +52,9 @@
                  skribe-reader
                  sxml-reader
                  html-reader
-                 org-reader)
+                 ;;xroger88:org-mode-reader
+                 jakob:org-mode-reader
+                 )
       #:builders (list (blog #:theme xroger88-theme
                              #:collections collections
                              #:post-prefix post-prefix

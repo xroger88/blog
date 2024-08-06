@@ -1,0 +1,104 @@
+#+TITLE: Reveal Repl
+#+tags: repl reveal clojure
+
+Special Talks about Reveal by the author vlaaad
+
+https://clojureverse.org/t/scicloj-meeting-16-video-is-up/6804
+
+* reveal introduction
+왜 reveal을 개발하게 되었는지에 대한 배경 설명
+- 프로그램을 inspect하기 하기 위해서는 UI의 도움이 필요함
+- 특히 프로파일링, 벤치마킹, 헤비 데이터구조 등
+- Cognitect REBL ...
+- (clojure.datafy/datafy String) ???
+
+Approach: only about P
+Read Eval (Print -> Visualize) Loop
+
+Approach: text is visual
+text is universal -- copy, share, transfer is possible
+In process, you can provide some additional functions for texts displayed in repl
+
+Approach: your objects are precious
+Approach: annotate anything
+Approach: inspections are an open set
+Approach: view is not a leaf, generating more data
+
+Notable features: tap
+(prn {:a 1 :b 2})
+(tap> {a:1 :b 2}) --- preserving objects unlike print
+
+Notable features: java-bean inspector
+(java-been obj) -- see object properties
+
+Notable features: remote prepl
+repl can talk to remote server, limitation is there because it is not in-process.
+
+Notable features: charts, tables
+
+Extensibility: formatting(rx/defstream), actions (rx/defaction), views(JavaFX -> cljfx)
+
+Future Plans
+- show multiple outputs at the same time
+- Emacs integration
+- custom views being exportable, sharable
+
+Q&A
+
+smalltalk liveness -> smalltalk environment
+reveal reminds me smalltalk liveness.
+livenet ----
+awesome tool~~
+
+UI test related ...
+what is libraies used??
+
+put -> ch, tap? how to get value
+tap used in debugging ...
+
+tapping value, list all values sent to tap.
+
+* The second topic is cljfx, ui library.
+- unbiased comparison for clj+cljfx and cljs+electron
+- cljfx component description converted to JavaFX code
+  {:fx/type :text-field
+   :text "Hello World"
+   :on-text-changed println}
+  ->
+  (doto (TextField.)
+    (.setText "Hello World")
+    (-> .textProperty
+        (.addListener (recify ChangeListener
+                        (changed [_ _ _ value]
+                            (println value)))))))
+- there are a bunch of built-in components
+- cljfx/css
+- packaging with Java 14
+  $ jpackage --input dist \
+             --main-jar uberjar.jar \
+             --main-class my.app.core \
+             --name my-app
+- reveal - observable view
+
+Q&A
+ data science, something can we do for it using cljfx ???
+ cljfx just for me, allows me to explore the program and development...
+ like notebook, linear exploration ???
+ chart and table are built-in, d3 import ???
+ not agree, not sure that javafx is very mature
+ they, javafx, are not designed for data science
+ if reveal is built-in in clojure then it is useful for teaching how the clojure works
+ get stuff easier, more understandable when i use reveal daily
+ the visual representation of data structure helps me to understand and develop the program...
+ spent many times to understand printing out ...
+
+* DEMO
+- vlaaad showed how to define stream, custom view, custom action etc.
+  fairly good to handle data in which we can insepct it in detailed UI view.
+
+How could we use this reveal --- hacking ...
+Very useful for data scientist ...
+Allow to explore data structure with charts, tables, heatmap view (custom)
+Data exploration !!! machine learning decision tree, there is we want to explore ...
+look for 3-rd party funding ...
+data-oriented exploration !!! really powerful ...

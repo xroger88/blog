@@ -25,7 +25,7 @@
 ;;;
 ;;; Code:
 
-(define-module (org-mode)
+(define-module (jakob reader org-mode)
   #:use-module (haunt reader)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
@@ -128,7 +128,7 @@ daemon. Assumes that FORM does not write to `standard-output'."
 (define (parse-metadata metadata-alist)
   (chain metadata-alist
          (assq-map! _ 'date (cut string->date <> "<~Y-~m-~d ~a ~H:~M>"))
-         (assq-map! _ 'tags (cut string-split <> #\space))))
+         (assq-map! _ 'tags (cut string-split <> (char-set #\space #\, #\:)))))
 
 ;; This is the public-facing interface. Because dates aren't serializable with
 ;; `write', the internal interface has extraction and parsing broken out into

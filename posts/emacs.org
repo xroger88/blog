@@ -1,0 +1,19 @@
+#+title: Emacs 활용
+#+author: xroger88
+#+tags: ide emacs doom
+#+date: <2024-08-02 Fri 14:00>
+#+description: 이멕스 관련 Tips
+
+test 1_bb c^2
+
+* Doom Emacs
+- [[https://noelwelsh.com/posts/2019-01-10-doom-emacs.html][Doom Emacs Workflows by noel welsh]]
+  - This is a good reference to get you familiar with basic workflow commands in Doom Emacs. Please check this first when you don't know how to use something.
+- In case of that SPC / p is not working to search files having some text
+  - You need to install ripgrep (or silver search) so emacs can use rg, ag commands. In MacOS, just do "brew install ripgrep the_silver_searcher".
+- Helm and Ivy : a search engine to find out texts and complete text/code_keywords/commands for helping the edior to select a complete one.
+  - There are lot of mentions among emacs user around community online, which one is better. Each one has pros and cons so you need to choose or use both appropriately for your purpose. Ivy is more modularized than Helm, you see Ivy itself, and Counsel which wraps the common emacs search commands, Swiper which ...
+
+* How-to elisp Programming
+- [[https://www.gnu.org/software/emacs/manual/eintr.html][An Introduction to Programming in Emacs Lisp]]
+- Code Examples, see Emacs-Lisp Introduction
