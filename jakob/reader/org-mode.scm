@@ -98,7 +98,7 @@ daemon. Assumes that FORM does not write to `standard-output'."
   (define result
     (eval-in-emacs
      `(save-excursion
-       (load-file "./emacs-htmlize/htmlize.el")
+       ;;(load-file "./emacs-htmlize/htmliz.el")
        (setq org-html-htmlize-output-type 'css)
        (let ((enable-local-variables :all))
          (set-buffer (find-file-noselect ,file-name)))
@@ -108,6 +108,30 @@ daemon. Assumes that FORM does not write to `standard-output'."
        (let ((result (org-export-as 'html nil nil t)))
          (with-temp-buffer
           (insert result)
+          (write-region (point-min) (point-max) ,output-file-name))))))
+  (define parsed (call-with-input-file output-file-name get-string-all))
+  (delete-file output-file-name)
+  ;; We wrap in a `div' because when we call `xml->sxml' later on in
+  ;; `read-org-mode-post-fresh', it is expecting a single element.
+  (format #f "<div>~a</div>" parsed))
+
+;; for testing to show inline-css color style
+(define (render-org-mode-file-fix file-name)
+  "Export FILE-NAME as an HTML document string"
+  (define output-file-name (tmpnam))
+  (define result
+    (eval-in-emacs
+     `(save-excursion
+       (load-file "./emacs-htmlize/ox-haunt.el")
+       (setq org-html-htmlize-output-type 'inline-css)
+       (let ((enable-local-variables :all))
+         (set-buffer (find-file-noselect ,file-name)))
+       (setq-local org-export-filter-latex-fragment-functions
+                   (list (lambda (data backend channel)
+                           (org-html-encode-plain-text data))))
+       (ox-haunt-export-as-html nil nil nil t (org-export-get-environment))
+       (let ((htmlbuf (get-buffer "*Org Haunt Export*")))
+         (with-current-buffer htmlbuf
           (write-region (point-min) (point-max) ,output-file-name))))))
   (define parsed (call-with-input-file output-file-name get-string-all))
   (delete-file output-file-name)

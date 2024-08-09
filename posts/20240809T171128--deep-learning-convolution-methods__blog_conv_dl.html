@@ -1,0 +1,116 @@
+title: Deep Learning Convolution Methods
+date: [2024-08-09 Fri 17:11]
+tags: conv,dl
+---
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org4c8e9b5">1. Convolution</a></li>
+<li><a href="#org46c1bcd">2. Dilated Convolutions (atrous Deconvolution)</a></li>
+<li><a href="#org484731c">3. Transposed Convolution (Deconvolutio or Fractionally strided convolution)</a></li>
+<li><a href="#orge1a85f0">4. Separable Convolution</a></li>
+<li><a href="#org5fa451c">5. Depthwise Convolution</a></li>
+<li><a href="#orgf38b308">6. Depthwise Separable Convolution</a></li>
+<li><a href="#org8699199">7. Pointwise Convolution</a></li>
+<li><a href="#org4dcacab">8. Grouped Convolution</a></li>
+<li><a href="#org13d401b">9. Deforamable Convolution</a></li>
+<li><a href="#org2a6ff92">10. Reference</a></li>
+</ul>
+</div>
+</div>
+<p>
+딥러닝 CNN에서 사용될 수 있는 컨볼루션 형태들에 대하여 알아 보자.
+</p>
+
+<div id="outline-container-org4c8e9b5" class="outline-2">
+<h2 id="org4c8e9b5"><span class="section-number-2">1.</span> Convolution</h2>
+<div class="outline-text-2" id="text-1">
+<ul class="org-ul">
+<li>Kernel Size: this determines the view of convolution, normally 3x3 used.</li>
+<li>Stride: this determines step size at the time of scanning image, default is 1 but normally 2 used for down-sampling image as max-pooling does.</li>
+<li>Padding: this determines how much extra padding is added. The output is less than the input in case of no padding. In the other hand, the output is same as the input when padding is added on edges on input image so paddding is used to maintain the size of output that is same as input size.</li>
+<li>Input &amp; Output Channels: the convolution layer computes the output channels from the input channels so the number of parameters required in this layer is I*O*K where K is the number of kernels.</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org46c1bcd" class="outline-2">
+<h2 id="org46c1bcd"><span class="section-number-2">2.</span> Dilated Convolutions (atrous Deconvolution)</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+The basic idea is to enlarge the receptive field by padding 0 weights in inter-rows and inter-columns of filter. For example, 3x3 filter having 9 weights is extended to 5x5 filter having 0 weights between rows and columns of 3x3 filter, in this case the dilated rate is 2. This is increasing the receptive field with less computations because most of weights in the dilated filter are zero.
+</p>
+<ul class="org-ul">
+<li>Dilated rate: the extended distance of kernel size, for instance 3x3 filter can be viewed to 5x5 with dilated rate 2.</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org484731c" class="outline-2">
+<h2 id="org484731c"><span class="section-number-2">3.</span> Transposed Convolution (Deconvolutio or Fractionally strided convolution)</h2>
+<div class="outline-text-2" id="text-3">
+<ul class="org-ul">
+<li>The general 2D convolution computes Y = X * K where X is input, K is kernel. For example, Y is 2x2 in case of X is 4x4, K is 3x3. For matrix multiplication, K is converted to 4x16 each row contains column-wised kernel 3 rows with padding 0 that results in convolution operation with the input 16x1 that is converted from the input 4x4. So Y is 4x1 from multiplying the 4x16 sparse matrix C by 16x1 input. Finally Y is converted to 2x2 output.</li>
+<li>As described above, the convolution operation makes the input down-sampled through kernal scanning. Transposed convolution is the opposite operation meaning given that the input is 2x2 and K is 3x3 the result is the up-sampled 4x4 output. The difference is that the sparse matrix C is transposed as 16x4 from the original one 4x16. the output is the 16x1 result of matrix multiplication for 16x4 * 4x1, finally Y is 4x4 matrix.</li>
+<li>Autodecoder architecture using CNN based Encoder-Decoder uses this transposed convolution technique for up-sampling in decoder part. Also, it is used for super resolution to increase the image resolution, combined with bilinear upsampling in image interpolation.</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-orge1a85f0" class="outline-2">
+<h2 id="orge1a85f0"><span class="section-number-2">4.</span> Separable Convolution</h2>
+<div class="outline-text-2" id="text-4">
+<ul class="org-ul">
+<li>The kernal matrix 3x3 can be the product of two smaller matrixes, for instance, 3x1 and 1x3 matrixes. The idea of seperable convolution is applying two smaller kernels through two convolution times instead of one convolution with big kernel. The similiar output is resulted by less computations.</li>
+<li>Note that all kernel is not seperable in terms of matrix factorization.</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org5fa451c" class="outline-2">
+<h2 id="org5fa451c"><span class="section-number-2">5.</span> Depthwise Convolution</h2>
+<div class="outline-text-2" id="text-5">
+<ul class="org-ul">
+<li>In normal convolution, it is impossible to get the spatial feature of specific channel since the convolution filter is affected by all channel components. Depthwise convolution uses per-channel filters to prevent the spatial feature from being affected from all channels. To reduce the computation exponentially MobileNet applied the depthwise convolution. For input 8x8x3 and kernel 3x3x3 for depth 3, the input 8x8 at each depth is applied with the 3x3 kernel at each depth, which results in the re-combined of the convolutioned outputs at each depth. In other words, it does not do convolution along with channel direction, just do it only for spatial direction.</li>
+<li>In depthwise convolution, each kernel has only parameters for one channel (depth). It makes a result of training only on spatial information of each unique channel. This is same as the result of grouped convolution divied by the number of channels.</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-orgf38b308" class="outline-2">
+<h2 id="orgf38b308"><span class="section-number-2">6.</span> Depthwise Separable Convolution</h2>
+<div class="outline-text-2" id="text-6">
+<ul class="org-ul">
+<li>The additional 1x1xC filter where C is the number of channels is applied on the result of depthwise convolution, resulting in the output with 1 depth. This depthwise separable convolution is a method to make the network lightweighted by considering both spatial feature and channel-wise feature.</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org8699199" class="outline-2">
+<h2 id="org8699199"><span class="section-number-2">7.</span> Pointwise Convolution</h2>
+<div class="outline-text-2" id="text-7">
+<ul class="org-ul">
+<li>Unlike other convolution methods such as depthwise convolution, pointwise convolution does not do convolution in spatial direction but in channel direction. Resultly it is mainly used for channel (depth) reduction. This is a fixed convolution layer with kernel size 1x1. Each filter represents a linear combination of per-channel coefficients. With this convolution, reducing the number of channels over convolution is possible. There is a trade-off between speed and information loss in using this type of convolution. To improve the performace, this pointwise convolution has been successfully applied in Inception, Xception (Extreme Inception), SqueezeNet and MobileNet.</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org4dcacab" class="outline-2">
+<h2 id="org4dcacab"><span class="section-number-2">8.</span> Grouped Convolution</h2>
+<div class="outline-text-2" id="text-8">
+<ul class="org-ul">
+<li>This method divide the channels into a few of groups and independently apply the convolution on each group. This gains the less one than normal 2D convolution in terms of the number of parameters and computations, and benefits from that can train highly correlated channels on each group. In result, the filter is trained independently for each group. Increasing the number of groups make the number of parameters descreased but may cause the degradation of performace when too many of groups are.</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org13d401b" class="outline-2">
+<h2 id="org13d401b"><span class="section-number-2">9.</span> Deforamable Convolution</h2>
+<div class="outline-text-2" id="text-9">
+<ul class="org-ul">
+<li>The idea starts from that the conventional CNN is based on fixed pattern such as conv with filter, pooling, roi pooling. It is pointed out that the complex transformation cannot be computed by applying such a kind of fixed patterns. For an instance, receptive field is always same and manual intervention is required in object detection. the deformable convolution introduces filter offset trained with additional conv layer. The original filter is convoluted with the input element of sampling position that is offseted as much as directed from the seperately trained 2D offset grid. There are two kernels trained simultaneously for output feature and offset. Resultantly this method shows that the sample pattern by kernel is not fixed and bigger object the more larger receptive field.</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org2a6ff92" class="outline-2">
+<h2 id="org2a6ff92"><span class="section-number-2">10.</span> Reference</h2>
+<div class="outline-text-2" id="text-10">
+<ul class="org-ul">
+<li><a href="https://eehoeskrap.tistory.com/431">https://eehoeskrap.tistory.com/431</a></li>
+</ul>
+</div>
+</div>

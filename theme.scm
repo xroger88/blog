@@ -63,7 +63,9 @@
                        (href "/feed.xml")))
               ,(stylesheet "reset")
               ,(stylesheet "fonts")
-              ,(stylesheet "xroger88"))
+              ,(stylesheet "xroger88")
+              ;;,(stylesheet "org-mode")
+              )
              (body
               (div (@ (class "container"))
                    (nav

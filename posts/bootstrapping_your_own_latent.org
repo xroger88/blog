@@ -4,8 +4,6 @@
 *Bootstrap your own latent: A new approach to self-supervised Learning*
 https://arxiv.org/abs/2006.07733
 
-xxx
-
 * Introduction
 - self-supervised representation learning, which is used as a pre-training for downstream tasks
 - only using positive pairs with two networks: online network and target network

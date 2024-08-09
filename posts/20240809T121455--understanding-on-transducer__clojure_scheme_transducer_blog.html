@@ -1,0 +1,778 @@
+title: Understanding on Transducer
+date: [2024-08-09 Fri 12:14]
+tags: transduer,clojure,scheme
+---
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org0665ddc">1. 개요</a></li>
+<li><a href="#org2aaf42f">2. 트랜스듀서란?</a></li>
+<li><a href="#orgd9a7e05">3. 클로저 언어에서의 트랜스듀서</a>
+<ul>
+<li><a href="#orgd9fe262">3.1. 조합에 의한 트랜스듀서 (Composibility)</a></li>
+<li><a href="#orgf92ac18">3.2. 트랜스포트(예, 채널/큐, 스트림)에 걸친 재사용 (Reuse across transports)</a></li>
+<li><a href="#org893b069">3.3. Stateless 로깅 트랜스듀서(커스텀 트랜스듀서)</a></li>
+<li><a href="#orgff74e32">3.4. Statefull 인터리브 트랜스듀서(커스텀 트랜스듀서)</a></li>
+<li><a href="#org01334ae">3.5. Laziness</a></li>
+<li><a href="#orge162100">3.6. Parallelism</a></li>
+</ul>
+</li>
+<li><a href="#orga6b4ce5">4. 스킴 언어에서의 트랜스듀서(GNU Guile)</a>
+<ul>
+<li><a href="#org600bb81">4.1. 트랜스듀스 적용 함수들</a></li>
+<li><a href="#orga5a29a7">4.2. 리듀스 함수들</a></li>
+<li><a href="#orgd7da970">4.3. 트랜스듀서 함수들</a></li>
+<li><a href="#orgf04b83f">4.4. 트랜스듀서 작성을 위한 도움이 되는 함수들</a></li>
+</ul>
+</li>
+<li><a href="#org04199d9">5. 참고문헌(Reference)</a></li>
+</ul>
+</div>
+</div>
+<p>
+함수형 언어에서 지원하는 트랜스듀서(Transducer)란 무엇인지 개념에 대하여 알아 보고, LISP 계열 언어인 클로저(Clojure)와 스킴(Scheme)에서 어떤한 용도로 트랜스듀서를 만들어서 사용하고 응용하는지, 어떤 차이가 있는지 살펴보자.
+</p>
+
+<div id="outline-container-org0665ddc" class="outline-2">
+<h2 id="org0665ddc"><span class="section-number-2">1.</span> 개요</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+클로저 언어를 배우면서 처음 트랜스듀서를 접했을 떄 대략적으로 어떤 용도로 사용된다는 것은 알았지만 충분히 설명 가능하지 않았다. 트랜스듀서를 활용하여 기능을 구현하는 일이 많치 않았던 것도 있지만 충분히 깊게 이해하지 못했기에 내가 필요한 기능을 구현하는데 실제적으로 적용하지 못한 것은 아닌가 생각된다. 스킴 언어를 구현한 GNU 가일(Guile)을 공부하면서 트랜스듀서에 대한 내용을 좀 더 이해할 수 있게 되었기에 그 내용을 정리하고자 한다.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org2aaf42f" class="outline-2">
+<h2 id="org2aaf42f"><span class="section-number-2">2.</span> 트랜스듀서란?</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+트랜스듀서는 Tranforming + Reducing 을 동시에 수행하는 함수의 일종으로 어떤 동작의 본질과 연속된 입력-&gt;처리-&gt;출력의 흐름을 분리하여 입력, 처리, 출력으로 구성된 루프(혹은 이터레이션/리커젼) 구조를 기반으로 본질에 해당하는 동작을 수행하도록 하는 패턴을 추상화한 것이다. 여기서 입력은 입력 스트림/시퀀스/콜렉션에서 입력 아이템을 하나씩 접근하는 것을 의미하고, 처리란 (1) 입력 아이템에 대하여 변환 함수(Transforming Function)를 적용하여 변환된 값을 만드는 부분과 (2) 지금까지 누적된 결과값과 변환된 값을 적용하여 새로운 누적 결과값을 만드는 축약 함수(Reducing Function)를 적용하는 부분을 의미한다. 출력은 누적 처리의 결과값을 출력 스트림/시퀀스/콜렉션에 반영하는 것을 의미한다. 이 모든 과정은 리듀스(Reduce) 함수가 가지는 기본 기능을 확장하여 구현될 수 있다.
+</p>
+
+<p>
+함수형 언어에는 Map, Filter 와 같이 입력 스트림/시퀀스/콜렉션을 받아서 특정한 처리를 한 후 출력 스트림/시퀀스/콜렉션으로  반환하는 다양한 함수가 존재 한다. 이러한 함수들의 경우 입력을 접근하는 방식, 출력을 내어 주는 방식, 입력 요소에 대하여 출력 요소로 매핑하는 일련의 단계를 반복하는 루프 기능 등 본질적인 기능은 같으나 다르게 구현되어야 한다. 다르게 구현될 수 있는 부분은 (1) 입력되는 스트림/시퀀스/콜렉션으로 부터 하나의 구성요소(아이템)를 얻어서 추가적인 변환을 하는데 적용할 아이템 변환 함수, (2) 축약된 출력값(스트림/시퀀스/콜렉션)과 변환된 입력값을 인자로 받아서 출력값을 재구성하는 축약 함수 등으로 추상화될 수 있다. 예들들면, 클로저 라이브러리에서 제공하는 컬렉션 및 스트림 처리 함수들 cat, mapcat, remove, take, take-while, take-nth, drop, drop-while, replace, partition-by, partition-all, keep-indexed, map-indexed, distint, interpose, dedupe, random-sample, 등 이 모든 함수들에 대하여 스트림/시퀀스/컬렉션 타입에 따라서 같은 함수를 매번 다르게 구현을 해야 하는냐? 한번 구현하여 여러 군데에서 사용할 수는 없을까? 이 질문에 대한 해결책이 트랜스듀서이다.
+</p>
+
+<p>
+좀 더 형식적으로 정의하면 아래와 같다. 여기서 편의상 입력과 출력은 시퀀스의 한 종류인 리스트(list)로 한정한다.
+<code>트랜스듀서(xform): rf -&gt; input-list -&gt; output-list</code>
+즉, xform은 다음과 같이 생성된다.
+</p>
+<ul class="org-ul">
+<li><p>
+먼저, 입력값에 대한 변환 함수를 정의하고 이를 적용하여 트랜스듀서를 만든다.
+</p>
+<pre class="example">
+(make-xform tf) 하면 rf-&gt;input-list-&gt;output-list 형식의 xform 함수를 리턴한다.
+예를 들면, (def xform (make-xform (fn [x] (+ x 1))))
+</pre></li>
+<li><p>
+만들어지 트랜스듀서에 리듀스 함수 및 입력 리스트를 아규먼트로 호출하여 출력 리스트를 얻는다.
+</p>
+<pre class="example">
+(xform rf input-list) 하면 output-list를 리턴한다.
+예를 들면, (xform + '(1 2 3)) =&gt; 9 ;; 2+3+4
+</pre></li>
+</ul>
+<p>
+여기서 리듀스 함수는 다음과 같은 조건에 만족해야 한다.
+</p>
+<ul class="org-ul">
+<li>(rf) =&gt; the identity value for rf, for example, (+) =&gt; 0</li>
+<li>(rf val1) =&gt; val1, for example, (+ 1) =&gt; 1</li>
+<li>(rf val1 val2) =&gt; the result value of <code>rf</code> computation, for example, (+ 1 2) =&gt; 3</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orgd9a7e05" class="outline-2">
+<h2 id="orgd9a7e05"><span class="section-number-2">3.</span> 클로저 언어에서의 트랜스듀서</h2>
+<div class="outline-text-2" id="text-3">
+<div class="org-src-container">
+<pre class="src src-clojure"><span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">reduce</span> <span style="color: #f78c6c;">[</span>f result coll<span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span><span style="color: #89DDFF;">if</span> <span style="color: #c3e88d;">(</span>not= '<span style="color: #89DDFF;">()</span> coll<span style="color: #c3e88d;">)</span>
+    <span style="color: #c3e88d;">(</span>reduce f <span style="color: #89DDFF;">(</span>f result <span style="color: #bb80b3;">(</span>first coll<span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span>rest coll<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span>
+    result<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+
+<span style="color: #c792ea;">(</span>reduce + 0 <span style="color: #f78c6c;">(</span>range 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+</pre>
+</div>
+
+
+<p>
+위 리듀스 함수는 콜렉션의 각 항목에 대하여 이전 결과값(result)과 입력값에 대한 계산(축약) 함수(<code>f</code>)의 결과값을 누적한다. 이러한 재귀형태는 반복적이며, loop-recur로 변환이 되면 스택을 소비하지 않게 구현될 수 있다. 리듀스에 대한 흥미있는 측면은 무엇을 변환하고자 하는 의도(의미) 즉, <code>f</code> 로 부터 반복 개념을 분리한 것에 있다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-clojure"><span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">mapping</span> <span style="color: #f78c6c;">[</span>rf<span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span><span style="color: #89DDFF;">fn</span> <span style="color: #c3e88d;">[</span>result el<span style="color: #c3e88d;">]</span>
+    <span style="color: #c3e88d;">(</span>rf result <span style="color: #89DDFF;">(</span>inc el<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+
+<span style="color: #c792ea;">(</span>reduce <span style="color: #f78c6c;">(</span>mapping conj<span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">[]</span> <span style="color: #f78c6c;">(</span>range 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">filtering</span> <span style="color: #f78c6c;">[</span>rf<span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span><span style="color: #89DDFF;">fn</span> <span style="color: #c3e88d;">[</span>result el<span style="color: #c3e88d;">]</span>
+    <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">if</span> <span style="color: #89DDFF;">(</span>odd? el<span style="color: #89DDFF;">)</span>
+      <span style="color: #89DDFF;">(</span>rf result el<span style="color: #89DDFF;">)</span>
+      result<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+
+<span style="color: #c792ea;">(</span>reduce <span style="color: #f78c6c;">(</span>filtering conj<span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">[]</span> <span style="color: #f78c6c;">(</span>range 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+</pre>
+</div>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">#'user/mapping</td>
+</tr>
+
+<tr>
+<td class="org-left">[1 2 3 4 5 6 7 8 9 10]</td>
+</tr>
+
+<tr>
+<td class="org-left">#'user/filtering</td>
+</tr>
+
+<tr>
+<td class="org-left">[1 3 5 7 9]</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+위 코드에서 리듀스 함수를 활용하여 mapping과 filtering을 처리를 할 때, mapping과 filtering의 차이는 새로운 입력값에 대하여 매핑된 출력값을 만드는 것의 차이라는 것을 알 수 있다. 따라서, 리듀스 함수의 규약에 따라 <code>reducing function f: result-&gt;input-&gt;output</code> 를 리턴하는 lambda function을 만들어서 result과 input을 새로운 출력값으로 매핑하는 함수(예, conj)를 파라미터로 추상화한다. 더 들어가면, 매핑의 경우 inc 그리고 필터링의 경우 odd?와 같은 기능함수가 달라 질 수 있으므로 이를 파라미터로 추상화하면 다음과 같다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-clojure"><span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">mapping</span> <span style="color: #f78c6c;">[</span>f<span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span><span style="color: #89DDFF;">fn</span> <span style="color: #c3e88d;">[</span>rf<span style="color: #c3e88d;">]</span>
+    <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">fn</span> <span style="color: #89DDFF;">[</span>result el<span style="color: #89DDFF;">]</span>
+      <span style="color: #89DDFF;">(</span>rf result <span style="color: #bb80b3;">(</span>f el<span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+
+<span style="color: #c792ea;">(</span>reduce <span style="color: #f78c6c;">(</span><span style="color: #c3e88d;">(</span>mapping inc<span style="color: #c3e88d;">)</span> conj<span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">[]</span> <span style="color: #f78c6c;">(</span>range 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">filtering</span> <span style="color: #f78c6c;">[</span>pred?<span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span><span style="color: #89DDFF;">fn</span> <span style="color: #c3e88d;">[</span>rf<span style="color: #c3e88d;">]</span>
+    <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">fn</span> <span style="color: #89DDFF;">[</span>result el<span style="color: #89DDFF;">]</span>
+      <span style="color: #89DDFF;">(</span><span style="color: #89DDFF;">if</span> <span style="color: #bb80b3;">(</span>pred? el<span style="color: #bb80b3;">)</span>
+        <span style="color: #bb80b3;">(</span>rf result el<span style="color: #bb80b3;">)</span>
+        result<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+
+<span style="color: #c792ea;">(</span>reduce <span style="color: #f78c6c;">(</span><span style="color: #c3e88d;">(</span>filtering odd?<span style="color: #c3e88d;">)</span> conj<span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">[]</span> <span style="color: #f78c6c;">(</span>range 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+</pre>
+</div>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">#'user/mapping</td>
+</tr>
+
+<tr>
+<td class="org-left">[1 2 3 4 5 6 7 8 9 10]</td>
+</tr>
+
+<tr>
+<td class="org-left">#'user/filtering</td>
+</tr>
+
+<tr>
+<td class="org-left">[1 3 5 7 9]</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+위 코드의 함수명을 다시 정리하면 다음과 같고, 이것이 clojure 표준 라이브러리에서 제공하는 map, filter에 대한 트랜스듀서이다. 인수의 갯수에  따라서 일반적인 map, filter가 될 수도 있고, 하나의 인수를 가지므로서 트랜스튜서가 될 수 있다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-clojure"><span style="color: #676E95;">;; </span><span style="color: #676E95;">excerpted from clojure.core/map defined in core.clj</span>
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">map</span> <span style="color: #f78c6c;">[</span>f<span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span><span style="color: #89DDFF;">fn</span> <span style="color: #c3e88d;">[</span>rf<span style="color: #c3e88d;">]</span>
+    <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">fn</span>
+      <span style="color: #89DDFF;">(</span><span style="color: #bb80b3;">[]</span> <span style="color: #bb80b3;">(</span>rf<span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span>
+      <span style="color: #89DDFF;">(</span><span style="color: #bb80b3;">[</span>result<span style="color: #bb80b3;">]</span> <span style="color: #bb80b3;">(</span>rf result<span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span>
+      <span style="color: #89DDFF;">(</span><span style="color: #bb80b3;">[</span>result input<span style="color: #bb80b3;">]</span>
+       <span style="color: #bb80b3;">(</span>rf result <span style="color: #ffcb6b;">(</span>f input<span style="color: #ffcb6b;">)</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span>
+      <span style="color: #89DDFF;">(</span><span style="color: #bb80b3;">[</span>result input &amp; inputs<span style="color: #bb80b3;">]</span>
+       <span style="color: #bb80b3;">(</span>rf result <span style="color: #ffcb6b;">(</span>apply f input inputs<span style="color: #ffcb6b;">)</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+
+<span style="color: #c792ea;">(</span>transduce <span style="color: #f78c6c;">(</span>map inc<span style="color: #f78c6c;">)</span> conj <span style="color: #f78c6c;">(</span>range 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">same as: (reduce ((map inc) conj) [] (range 10))</span>
+
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">transducer-awareness in many other places, the following for instance,</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">are also possible and remove the need for an explicit conj:</span>
+<span style="color: #c792ea;">(</span>sequence <span style="color: #f78c6c;">(</span>map +<span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">(</span>range 10<span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">(</span>range 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #c792ea;">(</span>into <span style="color: #f78c6c;">[]</span> <span style="color: #f78c6c;">(</span>map inc<span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">(</span>range 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+</pre>
+</div>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">#'user/map</td>
+</tr>
+
+<tr>
+<td class="org-left">[1 2 3 4 5 6 7 8 9 10]</td>
+</tr>
+
+<tr>
+<td class="org-left">(0 2 4 6 8 10 12 14 16 18)</td>
+</tr>
+
+<tr>
+<td class="org-left">[1 2 3 4 5 6 7 8 9 10]</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div id="outline-container-orgd9fe262" class="outline-3">
+<h3 id="orgd9fe262"><span class="section-number-3">3.1.</span> 조합에 의한 트랜스듀서 (Composibility)</h3>
+<div class="outline-text-3" id="text-3-1">
+<p>
+트랜스듀서는 위에서 살펴본 map, filter 버전과 같이 순차 반복 구조로 부터 변환(transforming) 및 리듀스(reducing)   함수들을 분리한다. 이러한 디자인의 흥미로운 결과는 트랜스듀서들을 조합하여 새로운 트랜스듀서를 만들어 낼 수 있다는 것이다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-clojure"><span style="color: #c792ea;">(</span><span style="color: #89DDFF;">def</span> <span style="color: #ffcb6b;">inc-and-filter</span> <span style="color: #f78c6c;">(</span>comp <span style="color: #c3e88d;">(</span>map inc<span style="color: #c3e88d;">)</span> <span style="color: #c3e88d;">(</span>filter odd?<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">def</span> <span style="color: #ffcb6b;">special+</span> <span style="color: #f78c6c;">(</span>inc-and-filter +<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #c792ea;">(</span>special+ 1 1<span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">=&gt; 1</span>
+<span style="color: #c792ea;">(</span>special+ 1 2<span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">=&gt; 4</span>
+<span style="color: #c792ea;">(</span>reduce special+ 0 <span style="color: #f78c6c;">(</span>range 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">=&gt; 25</span>
+<span style="color: #c792ea;">(</span>reduce + 0 <span style="color: #f78c6c;">(</span><span style="color: #c792ea;">clojure.core</span>/filter odd? <span style="color: #c3e88d;">(</span><span style="color: #c792ea;">clojure.core</span>/map inc <span style="color: #89DDFF;">(</span>range 10<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">=&gt; 25</span>
+<span style="color: #c792ea;">(</span>transduce <span style="color: #f78c6c;">(</span>comp <span style="color: #c3e88d;">(</span><span style="color: #c792ea;">clojure.core</span>/map inc<span style="color: #c3e88d;">)</span> <span style="color: #c3e88d;">(</span><span style="color: #c792ea;">clojure.core</span>/filter odd?<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span> + <span style="color: #f78c6c;">(</span>range 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">=&gt; 25</span>
+</pre>
+</div>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-right" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-right">#'user/inc-and-filter</td>
+</tr>
+
+<tr>
+<td class="org-right">#'user/special+</td>
+</tr>
+
+<tr>
+<td class="org-right">1</td>
+</tr>
+
+<tr>
+<td class="org-right">4</td>
+</tr>
+
+<tr>
+<td class="org-right">25</td>
+</tr>
+
+<tr>
+<td class="org-right">25</td>
+</tr>
+
+<tr>
+<td class="org-right">25</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+트랜스듀서를 조합하는 것은 값을 리턴하는 함수를 조합하는 것과 실행순서가 다름을 인지해야 한다. 예를 들면 (comp (partial + 1) (partial - 2))는 입력 x에 대하여 (- 2 x) 결과값에 +1이 되는 식으로 조합이된다. 이는 comp 자체가 right-left 방향으로 함수 조합이 이루어 지기 때문이다. (comp f1 f2 f3)는 f1(f2(f3))로 평가가 이루지기 때문이다. 조합되는 각 함수 결과가 하나의 값이라면 평가순서는 right-left로 이루어진 반면 결과가 함수(즉 computation)라면 실제  평가는 left-right로 이루어지는 것을 주지해야 한다. 위 <code>special+</code> 함수의 경우 다음과 같이 평가된다: <code>((map inc) ((filter odds?) +)) =&gt; (((filter odds?) +) result (inc input))</code>. 트랜스듀서의 조합은 따라서 평가가 left-right로 이루어지며 리듀스 함수의 파라메터인 누적된 결과값(result)과 입력값(input) 관련하여 변환 함수의 타입에 따라서 입력값을 변형하거나 상태에 따라서 추가되거나(injecting) 제거되거나(filtering) 될 수 있다. 최종적으로 리듀스 함수로 부터 최종적으로 적용된 반환값(return value)를 얻는다.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgf92ac18" class="outline-3">
+<h3 id="orgf92ac18"><span class="section-number-3">3.2.</span> 트랜스포트(예, 채널/큐, 스트림)에 걸친 재사용 (Reuse across transports)</h3>
+<div class="outline-text-3" id="text-3-2">
+<p>
+트랜스듀서(transducer)에 적용되는 컬렉션은 트랜스듀서와 완전히 분리되어 적용되기 때문에 다른 트랜스포트(transport)를 활용하여 트랜스듀서 재사용이 가능합니다. 여기서 트랜스포트는 아이템으로 구성된 콘렉션이 반복되는 방법을 의미한다. 표준 라이브러리에 있는 대부분의 트랜스포트 중에 하나는 순차적인 반복 즉, map 또는 filter와 같이 시퀀스 함수를 사용한다. 그러나, 다른 종류의 트랜스포트가 있다. 예를들면, core.async 라이브러리는 채널(channel)이라 부르는 추상화된 데이터 구조(blocking queue 동작과 유사함)를 통한 반복(즉, 스트림 처리)을 구현한다.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org893b069" class="outline-3">
+<h3 id="org893b069"><span class="section-number-3">3.3.</span> Stateless 로깅 트랜스듀서(커스텀 트랜스듀서)</h3>
+<div class="outline-text-3" id="text-3-3">
+<div class="org-src-container">
+<pre class="src src-clojure">  <span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">log</span> <span style="color: #f78c6c;">[</span>&amp; <span style="color: #c3e88d;">[</span>idx<span style="color: #c3e88d;">]</span><span style="color: #f78c6c;">]</span>
+    <span style="color: #f78c6c;">(</span><span style="color: #89DDFF;">fn</span> <span style="color: #c3e88d;">[</span>rf<span style="color: #c3e88d;">]</span>
+      <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">fn</span>
+        <span style="color: #89DDFF;">(</span><span style="color: #bb80b3;">[]</span> <span style="color: #bb80b3;">(</span>rf<span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span>
+        <span style="color: #89DDFF;">(</span><span style="color: #bb80b3;">[</span>result<span style="color: #bb80b3;">]</span> <span style="color: #bb80b3;">(</span>rf result<span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span>
+        <span style="color: #89DDFF;">(</span><span style="color: #bb80b3;">[</span>result el<span style="color: #bb80b3;">]</span>
+          <span style="color: #bb80b3;">(</span><span style="color: #89DDFF;">let</span> <span style="color: #ffcb6b;">[</span>n-step <span style="color: #82aaff;">(</span><span style="color: #89DDFF;">if</span> idx <span style="color: #44b9b1;">(</span>str <span style="color: #c3e88d;">"Step: "</span> idx <span style="color: #c3e88d;">". "</span><span style="color: #44b9b1;">)</span> <span style="color: #c3e88d;">""</span><span style="color: #82aaff;">)</span><span style="color: #ffcb6b;">]</span>
+            <span style="color: #ffcb6b;">(</span>println <span style="color: #82aaff;">(</span>format <span style="color: #c3e88d;">"%sResult: %s, Item: %s"</span> n-step result el<span style="color: #82aaff;">)</span><span style="color: #ffcb6b;">)</span><span style="color: #bb80b3;">)</span>
+          <span style="color: #bb80b3;">(</span>rf result el<span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+  &#8232;
+  <span style="color: #c792ea;">(</span>sequence <span style="color: #f78c6c;">(</span>log<span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">[</span><span style="color: #f78c6c;">:a</span> <span style="color: #f78c6c;">:b</span> <span style="color: #f78c6c;">:c</span><span style="color: #f78c6c;">]</span><span style="color: #c792ea;">)</span>
+  <span style="color: #676E95;">;; </span><span style="color: #676E95;">Result: null, Item: :a</span>
+  <span style="color: #676E95;">;; </span><span style="color: #676E95;">Result: null, Item: :b</span>
+  <span style="color: #676E95;">;; </span><span style="color: #676E95;">Result: null, Item: :c</span>
+  <span style="color: #676E95;">;; </span><span style="color: #676E95;">(:a :b :c)</span>
+
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">def</span> ^<span style="color: #f78c6c;">:dynamic</span> <span style="color: #ffcb6b;">*dbg?*</span> <span style="color: #f78c6c;">false</span><span style="color: #c792ea;">)</span>
+&#8232;
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">comp*</span> <span style="color: #f78c6c;">[</span>&amp; xforms<span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span>apply comp
+    <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">if</span> <span style="color: #ffcb6b;">*dbg?*</span>
+      <span style="color: #89DDFF;">(</span><span style="color: #89DDFF;">-&gt;&gt;</span>
+        <span style="color: #bb80b3;">(</span>range<span style="color: #bb80b3;">)</span>
+        <span style="color: #bb80b3;">(</span>map log<span style="color: #bb80b3;">)</span>
+        <span style="color: #bb80b3;">(</span>interleave xforms<span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span>
+      xforms<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+&#8232;
+<span style="color: #c792ea;">(</span>transduce
+  <span style="color: #f78c6c;">(</span>comp*
+    <span style="color: #c3e88d;">(</span>filter odd?<span style="color: #c3e88d;">)</span>
+    <span style="color: #c3e88d;">(</span>map inc<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span>
+  +
+  <span style="color: #f78c6c;">(</span>range 5<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">6</span>
+&#8232;
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">binding</span> <span style="color: #f78c6c;">[</span><span style="color: #ffcb6b;">*dbg?*</span> <span style="color: #f78c6c;">true</span><span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span>transduce
+    <span style="color: #c3e88d;">(</span>comp*
+      <span style="color: #89DDFF;">(</span>filter odd?<span style="color: #89DDFF;">)</span>
+      <span style="color: #89DDFF;">(</span>map inc<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span>
+    +
+    <span style="color: #c3e88d;">(</span>range 5<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">Step: 0. Result: 0, Item: 1</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">Step: 1. Result: 0, Item: 2</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">Step: 0. Result: 2, Item: 3</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">Step: 1. Result: 2, Item: 4</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">6</span>
+
+</pre>
+</div>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">#'user/log</td>
+</tr>
+
+<tr>
+<td class="org-left">(:a :b :c)</td>
+</tr>
+
+<tr>
+<td class="org-left">#'user/*dbg?*</td>
+</tr>
+
+<tr>
+<td class="org-left">#'user/comp*</td>
+</tr>
+
+<tr>
+<td class="org-left">6</td>
+</tr>
+
+<tr>
+<td class="org-left">6</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div id="outline-container-orgff74e32" class="outline-3">
+<h3 id="orgff74e32"><span class="section-number-3">3.4.</span> Statefull 인터리브 트랜스듀서(커스텀 트랜스듀서)</h3>
+<div class="outline-text-3" id="text-3-4">
+<div class="org-src-container">
+<pre class="src src-clojure"><span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">egypt-mult</span> <span style="color: #f78c6c;">[</span>x y<span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span><span style="color: #89DDFF;">-&gt;&gt;</span> <span style="color: #c3e88d;">(</span>interleave
+         <span style="color: #89DDFF;">(</span>iterate #<span style="color: #bb80b3;">(</span>quot <span style="color: #ffcb6b;">%</span> 2<span style="color: #bb80b3;">)</span> x<span style="color: #89DDFF;">)</span>
+         <span style="color: #89DDFF;">(</span>iterate #<span style="color: #bb80b3;">(</span>* <span style="color: #ffcb6b;">%</span> 2<span style="color: #bb80b3;">)</span> y<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span>
+    <span style="color: #c3e88d;">(</span>partition-all 2<span style="color: #c3e88d;">)</span>
+    <span style="color: #c3e88d;">(</span>take-while #<span style="color: #89DDFF;">(</span>pos? <span style="color: #bb80b3;">(</span>first <span style="color: #ffcb6b;">%</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span>
+    <span style="color: #c3e88d;">(</span>filter #<span style="color: #89DDFF;">(</span>odd? <span style="color: #bb80b3;">(</span>first <span style="color: #ffcb6b;">%</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span>
+    <span style="color: #c3e88d;">(</span>map second<span style="color: #c3e88d;">)</span>
+    <span style="color: #c3e88d;">(</span>reduce +<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+&#8232;
+<span style="color: #c792ea;">(</span>egypt-mult 640 10<span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">6400</span>
+
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">interleave-xform</span> <span style="color: #676E95;">;</span>
+  <span style="color: #f78c6c;">[</span>coll<span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span><span style="color: #89DDFF;">fn</span> <span style="color: #c3e88d;">[</span>rf<span style="color: #c3e88d;">]</span>
+    <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">let</span> <span style="color: #89DDFF;">[</span>fillers <span style="color: #bb80b3;">(</span>volatile! <span style="color: #ffcb6b;">(</span>seq coll<span style="color: #ffcb6b;">)</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">]</span> <span style="color: #676E95;">;</span>
+      <span style="color: #89DDFF;">(</span><span style="color: #89DDFF;">fn</span>
+        <span style="color: #bb80b3;">(</span><span style="color: #ffcb6b;">[]</span> <span style="color: #ffcb6b;">(</span>rf<span style="color: #ffcb6b;">)</span><span style="color: #bb80b3;">)</span>
+        <span style="color: #bb80b3;">(</span><span style="color: #ffcb6b;">[</span>result<span style="color: #ffcb6b;">]</span> <span style="color: #ffcb6b;">(</span>rf result<span style="color: #ffcb6b;">)</span><span style="color: #bb80b3;">)</span>
+        <span style="color: #bb80b3;">(</span><span style="color: #ffcb6b;">[</span>result input<span style="color: #ffcb6b;">]</span>
+         <span style="color: #ffcb6b;">(</span><span style="color: #89DDFF;">if-let</span> <span style="color: #82aaff;">[</span><span style="color: #44b9b1;">[</span>filler<span style="color: #44b9b1;">]</span> @fillers<span style="color: #82aaff;">]</span>      <span style="color: #676E95;">;</span>
+           <span style="color: #82aaff;">(</span><span style="color: #89DDFF;">let</span> <span style="color: #44b9b1;">[</span>step <span style="color: #80cbc4;">(</span>rf result input<span style="color: #80cbc4;">)</span><span style="color: #44b9b1;">]</span>
+             <span style="color: #44b9b1;">(</span><span style="color: #89DDFF;">if</span> <span style="color: #80cbc4;">(</span>reduced? step<span style="color: #80cbc4;">)</span>          <span style="color: #676E95;">;</span>
+               step
+               <span style="color: #80cbc4;">(</span><span style="color: #89DDFF;">do</span>
+                 <span style="color: #c792ea;">(</span><span style="color: #89DDFF;">vswap!</span> fillers next<span style="color: #c792ea;">)</span>    <span style="color: #676E95;">;</span>
+                 <span style="color: #c792ea;">(</span>rf step filler<span style="color: #c792ea;">)</span><span style="color: #80cbc4;">)</span><span style="color: #44b9b1;">)</span><span style="color: #82aaff;">)</span>
+           <span style="color: #82aaff;">(</span>reduced result<span style="color: #82aaff;">)</span><span style="color: #ffcb6b;">)</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>         <span style="color: #676E95;">;</span>
+
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">egypt-mult*</span> <span style="color: #f78c6c;">[</span>x y<span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span>transduce
+    <span style="color: #c3e88d;">(</span>comp
+      <span style="color: #89DDFF;">(</span>interleave-xform <span style="color: #bb80b3;">(</span>iterate #<span style="color: #ffcb6b;">(</span>* <span style="color: #ffcb6b;">%</span> 2<span style="color: #ffcb6b;">)</span> y<span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span>
+      <span style="color: #89DDFF;">(</span>partition-all 2<span style="color: #89DDFF;">)</span>
+      <span style="color: #89DDFF;">(</span>take-while #<span style="color: #bb80b3;">(</span>pos? <span style="color: #ffcb6b;">(</span>first <span style="color: #ffcb6b;">%</span><span style="color: #ffcb6b;">)</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span>
+      <span style="color: #89DDFF;">(</span>filter #<span style="color: #bb80b3;">(</span>odd? <span style="color: #ffcb6b;">(</span>first <span style="color: #ffcb6b;">%</span><span style="color: #ffcb6b;">)</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span>
+      <span style="color: #89DDFF;">(</span>map second<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span>
+    +
+    <span style="color: #c3e88d;">(</span>iterate #<span style="color: #89DDFF;">(</span>quot <span style="color: #ffcb6b;">%</span> 2<span style="color: #89DDFF;">)</span> x<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+&#8232;
+<span style="color: #c792ea;">(</span>egypt-mult* 4 5<span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">20</span>
+
+</pre>
+</div>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">#'user/egypt-mult</td>
+</tr>
+
+<tr>
+<td class="org-left">6400</td>
+</tr>
+
+<tr>
+<td class="org-left">#'user/interleave-xform</td>
+</tr>
+
+<tr>
+<td class="org-left">#'user/egypt-mult*</td>
+</tr>
+
+<tr>
+<td class="org-left">20</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div id="outline-container-org01334ae" class="outline-3">
+<h3 id="org01334ae"><span class="section-number-3">3.5.</span> Laziness</h3>
+<div class="outline-text-3" id="text-3-5">
+<p>
+표준 라이브러리에서 트랜스듀서를 적용하는 4가지 방식이 있다. transduce와 into는 lazy evaluation을 지원하지 않는다. 입력을 점진적으로 소비하면서 게으르게 트랜스듀서 체인(transducer chain)을 적용하는데 관심이 있다면, 그러한 목적으로 설계된 sequence와 eduction을 사용할 수 있다. 이들은 chunked lazyness를 지원한다. Lazy 시퀀스에 대하여 32개씩 시퀀스 아이템이 소비된다. 입력에 대하여 다중 평가(해석)이 요구되는 경우, eduction은 캐슁 없이 다중 평가를 수행하는 반면 sequence는 한번 평가되면 메모리에 캐쉬되어 나중에 참조된다. 어떤 방식을 선택하는냐는 memory-computation trade-off의 문제이다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-clojure"><span style="color: #c792ea;">(</span><span style="color: #89DDFF;">def</span> <span style="color: #ffcb6b;">cnt</span> <span style="color: #f78c6c;">(</span>atom 0<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #c792ea;">(</span>take 10 <span style="color: #f78c6c;">(</span>transduce <span style="color: #c3e88d;">(</span>map #<span style="color: #89DDFF;">(</span><span style="color: #89DDFF;">do</span> <span style="color: #bb80b3;">(</span>swap! cnt inc<span style="color: #bb80b3;">)</span> <span style="color: #ffcb6b;">%</span><span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span> conj <span style="color: #c3e88d;">()</span> <span style="color: #c3e88d;">(</span>range 1000<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">(999 998 997 996 995 994 993 992 991 990)</span>
+@cnt
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">1000</span>
+
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">def</span> <span style="color: #ffcb6b;">cnt1</span> <span style="color: #f78c6c;">(</span>atom 0<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">let</span> <span style="color: #f78c6c;">[</span>res <span style="color: #c3e88d;">(</span>eduction <span style="color: #89DDFF;">(</span>map #<span style="color: #bb80b3;">(</span><span style="color: #89DDFF;">do</span> <span style="color: #ffcb6b;">(</span>swap! cnt1 inc<span style="color: #ffcb6b;">)</span> <span style="color: #ffcb6b;">%</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span>range 1000<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span><span style="color: #89DDFF;">doall</span> <span style="color: #c3e88d;">(</span>take 10 res<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span>
+  @cnt1<span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">33</span>
+&#8232;
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">def</span> <span style="color: #ffcb6b;">cnt2</span> <span style="color: #f78c6c;">(</span>atom 0<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">let</span> <span style="color: #f78c6c;">[</span>res <span style="color: #c3e88d;">(</span>sequence <span style="color: #89DDFF;">(</span>map #<span style="color: #bb80b3;">(</span><span style="color: #89DDFF;">do</span> <span style="color: #ffcb6b;">(</span>swap! cnt2 inc<span style="color: #ffcb6b;">)</span> <span style="color: #ffcb6b;">%</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span>range 1000<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span><span style="color: #89DDFF;">doall</span> <span style="color: #c3e88d;">(</span>take 10 res<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span>
+  @cnt2<span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">33</span>
+
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">def</span> <span style="color: #ffcb6b;">cnt1</span> <span style="color: #f78c6c;">(</span>atom 0<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">let</span> <span style="color: #f78c6c;">[</span>res <span style="color: #c3e88d;">(</span>eduction <span style="color: #89DDFF;">(</span>map #<span style="color: #bb80b3;">(</span><span style="color: #89DDFF;">do</span> <span style="color: #ffcb6b;">(</span>swap! cnt1 inc<span style="color: #ffcb6b;">)</span> <span style="color: #ffcb6b;">%</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span>range 10<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span>conj <span style="color: #c3e88d;">(</span>rest res<span style="color: #c3e88d;">)</span> <span style="color: #c3e88d;">(</span>first res<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span>
+  @cnt1<span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">20</span>
+&#8232;
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">def</span> <span style="color: #ffcb6b;">cnt2</span> <span style="color: #f78c6c;">(</span>atom 0<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">let</span> <span style="color: #f78c6c;">[</span>res <span style="color: #c3e88d;">(</span>sequence <span style="color: #89DDFF;">(</span>map #<span style="color: #bb80b3;">(</span><span style="color: #89DDFF;">do</span> <span style="color: #ffcb6b;">(</span>swap! cnt2 inc<span style="color: #ffcb6b;">)</span> <span style="color: #ffcb6b;">%</span><span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span>range 10<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span>conj <span style="color: #c3e88d;">(</span>rest res<span style="color: #c3e88d;">)</span> <span style="color: #c3e88d;">(</span>first res<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span> <span style="color: #676E95;">; (2)</span>
+  @cnt2<span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">10</span>
+</pre>
+</div>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">#'user/cnt</td>
+</tr>
+
+<tr>
+<td class="org-left">(999 998 997 996 995 994 993 992 991 990)</td>
+</tr>
+
+<tr>
+<td class="org-left">1000</td>
+</tr>
+
+<tr>
+<td class="org-left">#'user/cnt1</td>
+</tr>
+
+<tr>
+<td class="org-left">33</td>
+</tr>
+
+<tr>
+<td class="org-left">#'user/cnt2</td>
+</tr>
+
+<tr>
+<td class="org-left">33</td>
+</tr>
+
+<tr>
+<td class="org-left">#'user/cnt1</td>
+</tr>
+
+<tr>
+<td class="org-left">20</td>
+</tr>
+
+<tr>
+<td class="org-left">#'user/cnt2</td>
+</tr>
+
+<tr>
+<td class="org-left">10</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div id="outline-container-orge162100" class="outline-3">
+<h3 id="orge162100"><span class="section-number-3">3.6.</span> Parallelism</h3>
+<div class="outline-text-3" id="text-3-6">
+<p>
+core.async의 pipelines, fold 등에 관하여, fold는 "divde and conquer" 모델에 기반하여 병렬화를 지원한다. 처리해야할 일을 병렬처리가 가능한 꾸러미로 나누고 각 꾸러미를 동시에 병렬처리(계산)하고, 각 꾸러미의 결과를 다시 최종 결과로 결합한다. pipelines 및 fold 모두는 상태를 기억하는 트랜스듀서가 포함되지 않아야 작동 가능하다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-clojure"><span style="color: #c792ea;">(</span>require '<span style="color: #f78c6c;">[</span>clojure.core.reducers <span style="color: #f78c6c;">:refer</span> <span style="color: #c3e88d;">[</span>fold<span style="color: #c3e88d;">]</span><span style="color: #f78c6c;">]</span><span style="color: #c792ea;">)</span>
+&#8232;
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">def</span> <span style="color: #ffcb6b;">xform</span> <span style="color: #f78c6c;">(</span>comp <span style="color: #c3e88d;">(</span>map inc<span style="color: #c3e88d;">)</span> <span style="color: #c3e88d;">(</span>filter odd?<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+&#8232;
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">defn</span> <span style="color: #82aaff;">ptransduce</span> <span style="color: #f78c6c;">[</span>xform rf combinef coll<span style="color: #f78c6c;">]</span>
+  <span style="color: #f78c6c;">(</span>fold combinef
+    <span style="color: #c3e88d;">(</span>xform rf<span style="color: #c3e88d;">)</span>
+    <span style="color: #c3e88d;">(</span>into <span style="color: #89DDFF;">[]</span> coll<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+&#8232;
+<span style="color: #c792ea;">(</span>ptransduce xform + + <span style="color: #f78c6c;">(</span>range 1000000<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">250000000000</span>
+
+</pre>
+</div>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">#'user/xform</td>
+</tr>
+
+<tr>
+<td class="org-left">#'user/ptransduce</td>
+</tr>
+
+<tr>
+<td class="org-left">250000000000</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orga6b4ce5" class="outline-2">
+<h2 id="orga6b4ce5"><span class="section-number-2">4.</span> 스킴 언어에서의 트랜스듀서(GNU Guile)</h2>
+<div class="outline-text-2" id="text-4">
+<p>
+일반적으로 사용하는 리스트(콜렉션) 타입에 대한 map, filter 등의 함수의 경우 단순히 조합(compose)할 경우 각 함수의 입력과 출력이 리스트가 되기 때문에 조합에 따라 불필요한 중간 리스트가 생성되는 문제가 있다. 트랜스듀서는 입력 리스트의 아이템별로 체인으로 연결된 모든 과정이 계산되어 마지막 단계에서 결과값을 만들어 이를 반환하기 때문에 중간 결과를 생성하지 않는다. 이는 가비지 컬렉션 부담을 줄여 준다.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #c792ea;">(</span><span style="color: #89DDFF;">use-modules</span> <span style="color: #f78c6c;">(</span>srfi srfi-171<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">define</span> <span style="color: #82aaff;">xform</span> <span style="color: #f78c6c;">(</span>compose <span style="color: #c3e88d;">(</span>tfilter odd?<span style="color: #c3e88d;">)</span> <span style="color: #c3e88d;">(</span>tmap <span style="color: #89DDFF;">(</span><span style="color: #89DDFF;">lambda</span> <span style="color: #bb80b3;">(</span>x<span style="color: #bb80b3;">)</span> <span style="color: #bb80b3;">(</span>* x x<span style="color: #bb80b3;">)</span><span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #c792ea;">(</span>list-transduce xform + '<span style="color: #f78c6c;">(</span>1 2 3 4 5<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span> <span style="color: #676E95;">;; </span><span style="color: #676E95;">=&gt; 35</span>
+</pre>
+</div>
+
+<p>
+SRFI-171에서 논의된 리듀서(reducer)와 트랜스듀서(transducer)의 개념은 다음과 같다. 먼저 리듀서는 3-arities 프로시쥬어(함수)로 rf라고 할때, 다음 조건을 만족해야 한다.
+</p>
+<ol class="org-ol">
+<li>(rf) =&gt; the identity of rf, 예를 들면 rf가 + 인경우 (+) =&gt; 0 이 된다.</li>
+<li>(rf result-so-far) =&gt; 최종 결과값(누적값) result-so-far가 반환됨. (+ 300) =&gt; 300과 같음.</li>
+<li>(rf result-so-far input) =&gt; result-so-far와 input을 이용하여 계산된 결과값이 반환됨. (+ 300 30) =&gt; 330과 같음.</li>
+</ol>
+<p>
+모든 리듀서 함수는 위 3가지 조건에 대하여 만족해야 한다. 예를들면, + 함수의 경우 리듀서 함수로 사용될 수 있다.
+</p>
+
+<p>
+트랜스듀서는 1-arity 프로시쥬어로 tf라 할때, 리듀스 함수 rf를 입력 파라메터로 받아서 다음과 같이 동작한다.
+</p>
+<ol class="org-ol">
+<li>((tf rf)) =&gt; 아규먼트가 없을 떄, (rf)가 호출된다.</li>
+<li>((tf rf) result-so-far) =&gt; result-so-far를 변환하여(혹은 그대로), (rf result-so-far)를 호출한다.</li>
+<li>((tf rf) result-so-far input) =&gt; result-so-far 및 input을 변환하여(혹은 그대로), (rf result-so-far input)을 호출한다.</li>
+</ol>
+<p>
+트랜스듀서 생성시 result-so-far, input에 대한 변환 여부 및 변환시 사용될 함수가 지정된다. 예를 들면, (list-transduce (tfilter odd?) + '(1 2 3 4 5))에 처럼, 리스트에 대한 트랜스듀스로서 (tfilter odd?)가 트랜스듀서(xform)이 되며 + 리듀서가 적용되어 홀수만 합산을 하여 결과를 준다.
+</p>
+
+<p>
+트랜스듀서들의 조합 및 최종 축약된 결과은 단지 마지막 스템에서 실행되기 때문에 조합된 트랜스듀서들은 중간 결과 및 컬렉션을 만들지 않을 것이다. 일반적으로 조합된 함수들의 적용은 오른쪽에서 왼쪽으로 적용되는 반면, 트랜스듀싱의 경우 왼쪽에서 오른쪽으로 적용된다. 이는 클로저 언어의 트랜스듀서에 설명되었듯이 조합에 따른 결과값이 다음 함수에 적용되는 것이 아니라 계산이 프로그래밍된 람다 프로시쥬어가 적용되기 때문이다. (compose (tfilter odd?) (tmap sqrt))의 경우 먼저 필터링이 된 홀수에 대해서만 sqrt가 계산된다.
+</p>
+
+
+<p>
+비록 트랜스듀서는 map이나 이와 유사한 것들에 대한 일반화로 보일지 모르나, 그렇치 않다. 트랜스듀서는 어떤 문맥에서 사용될지에 대하여 모르기 때문에 어떤 트랜스듀서들은 상태를 유지해야 하고, 상태 유지에 따른 변형 및 병렬화, 컨트롤 흐름 제어(Continuation) 등이 적용될 수 있다.
+</p>
+
+<p>
+SRFI-1에 정의된 함수들에 대응하여 트랜스듀서에 적용되는 리듀스 함수들의 이름은 <code>rcons</code> 와 같이 'r'이 앞에 부쳐지고, 트랜스듀서의 경우 <code>tfilter</code> 와 같이 't'가 붙여 진다. 이런 이름에 대한 규칙이 적용된다.
+</p>
+</div>
+
+<div id="outline-container-org600bb81" class="outline-3">
+<h3 id="org600bb81"><span class="section-number-3">4.1.</span> 트랜스듀스 적용 함수들</h3>
+<div class="outline-text-3" id="text-4-1">
+<ul class="org-ul">
+<li>list-transduce xform f lst</li>
+<li>list-transduce xform f identity lst</li>
+<li>vector-transduce xform f vec</li>
+<li>vector-transduce xform f identity vec</li>
+<li>string-transduce xform f str</li>
+<li>string-transduce xform f identity str</li>
+<li>bytevector-transduce xform f bv</li>
+<li>bytevector-transduce xform f identity bv</li>
+<li>generator-transduce xform f gen</li>
+<li>generator-transduce xform f identity gen</li>
+<li>port-transduce xform f reader</li>
+<li>port-transduce xform f reader port</li>
+<li>port-transduce xform f identity reader port</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-orga5a29a7" class="outline-3">
+<h3 id="orga5a29a7"><span class="section-number-3">4.2.</span> 리듀스 함수들</h3>
+<div class="outline-text-3" id="text-4-2">
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #c792ea;">(</span>list-transduce <span style="color: #f78c6c;">(</span>tmap <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">lambda</span> <span style="color: #89DDFF;">(</span>x<span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span>+ x 1<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span> rcons <span style="color: #f78c6c;">(</span>list 0 1 2 3<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">&#8658; (1 2 3 4)</span>
+<span style="color: #c792ea;">(</span>list-transduce <span style="color: #f78c6c;">(</span>tmap <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">lambda</span> <span style="color: #89DDFF;">(</span>x<span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span>+ x 1<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span> reverse-rcons <span style="color: #f78c6c;">(</span>list 0 1 2 3<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">&#8658; (4 3 2 1)</span>
+<span style="color: #c792ea;">(</span>list-transduce <span style="color: #f78c6c;">(</span>tmap <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">lambda</span> <span style="color: #89DDFF;">(</span>x<span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span>+ x 1<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">(</span>rany odd?<span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">(</span>list 1 3 5<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">&#8658; #f</span>
+<span style="color: #c792ea;">(</span>list-transduce <span style="color: #f78c6c;">(</span>tmap <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">lambda</span> <span style="color: #89DDFF;">(</span>x<span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span>+ x 1<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">(</span>rany odd?<span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">(</span>list 1 3 4 5<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">&#8658; #t</span>
+<span style="color: #c792ea;">(</span>list-transduce
+ <span style="color: #f78c6c;">(</span>tmap <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">lambda</span> <span style="color: #89DDFF;">(</span>x<span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span>+ x 1<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span>
+ <span style="color: #f78c6c;">(</span>revery <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">lambda</span> <span style="color: #89DDFF;">(</span>v<span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span><span style="color: #89DDFF;">if</span> <span style="color: #bb80b3;">(</span>odd? v<span style="color: #bb80b3;">)</span> v #f<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span>
+ <span style="color: #f78c6c;">(</span>list 2 4 6<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">&#8658; 7</span>
+<span style="color: #c792ea;">(</span>list-transduce <span style="color: #f78c6c;">(</span>tmap <span style="color: #c3e88d;">(</span><span style="color: #89DDFF;">lambda</span> <span style="color: #89DDFF;">(</span>x<span style="color: #89DDFF;">)</span> <span style="color: #89DDFF;">(</span>+ x 1<span style="color: #89DDFF;">)</span><span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">(</span>revery odd?<span style="color: #f78c6c;">)</span> <span style="color: #f78c6c;">(</span>list 2 4 5 6<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">&#8658; #f</span>
+<span style="color: #c792ea;">(</span>list-transduce <span style="color: #f78c6c;">(</span>tfilter odd?<span style="color: #f78c6c;">)</span> rcount <span style="color: #f78c6c;">(</span>list 1 2 3 4<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">&#8658; 2</span>
+</pre>
+</div>
+</div>
+</div>
+<div id="outline-container-orgd7da970" class="outline-3">
+<h3 id="orgd7da970"><span class="section-number-3">4.3.</span> 트랜스듀서 함수들</h3>
+<div class="outline-text-3" id="text-4-3">
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #c792ea;">(</span>list-transduce tconcatenate rcons '<span style="color: #f78c6c;">(</span><span style="color: #c3e88d;">(</span>1 2<span style="color: #c3e88d;">)</span> <span style="color: #c3e88d;">(</span>3 4 5<span style="color: #c3e88d;">)</span> <span style="color: #c3e88d;">(</span>6 <span style="color: #89DDFF;">(</span>7 8<span style="color: #89DDFF;">)</span> 9<span style="color: #c3e88d;">)</span><span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">&#8658; (1 2 3 4 5 6 (7 8) 9)</span>
+<span style="color: #c792ea;">(</span>list-transduce tflatten rcons '<span style="color: #f78c6c;">(</span><span style="color: #c3e88d;">(</span>1 2<span style="color: #c3e88d;">)</span> 3 <span style="color: #c3e88d;">(</span>4 <span style="color: #89DDFF;">(</span>5 6<span style="color: #89DDFF;">)</span> 7 8<span style="color: #c3e88d;">)</span> 9<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">&#8658; (1 2 3 4 5 6 7 8 9)</span>
+<span style="color: #c792ea;">(</span>list-transduce <span style="color: #f78c6c;">(</span>tenumerate 1<span style="color: #f78c6c;">)</span> rcons <span style="color: #f78c6c;">(</span>list 'first 'second 'third<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;;</span><span style="color: #676E95;">&#8658; ((1 . first) (2 . second) (3 . third))</span>
+
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">guile-specific transducers</span>
+<span style="color: #c792ea;">(</span><span style="color: #89DDFF;">use-modules</span> <span style="color: #f78c6c;">(</span>srfi srfi-171 gnu<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;; </span><span style="color: #676E95;">This behaves exactly like (tsegment 4).</span>
+<span style="color: #c792ea;">(</span>list-transduce <span style="color: #f78c6c;">(</span>tbatch <span style="color: #c3e88d;">(</span>ttake 4<span style="color: #c3e88d;">)</span> rcons<span style="color: #f78c6c;">)</span> rcons <span style="color: #f78c6c;">(</span>iota 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;;</span><span style="color: #676E95;">&#8658; ((0 1 2 3) (4 5 6 7) (8 9))</span>
+<span style="color: #c792ea;">(</span>list-transduce <span style="color: #f78c6c;">(</span>tfold +<span style="color: #f78c6c;">)</span> rcons <span style="color: #f78c6c;">(</span>iota 10<span style="color: #f78c6c;">)</span><span style="color: #c792ea;">)</span>
+<span style="color: #676E95;">;;</span><span style="color: #676E95;">&#8658; (0 1 3 6 10 15 21 28 36 45)</span>
+</pre>
+</div>
+</div>
+</div>
+<div id="outline-container-orgf04b83f" class="outline-3">
+<h3 id="orgf04b83f"><span class="section-number-3">4.4.</span> 트랜스듀서 작성을 위한 도움이 되는 함수들</h3>
+<div class="outline-text-3" id="text-4-4">
+<p>
+(srfi srfi-171 meta) 모듈에 정의된 함수들로 트랜스듀서를 직접 작성할 경우만 사용될 필요가 있다. 예를 들면, <code>reduced</code>, <code>reduced?</code>, 등.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org04199d9" class="outline-2">
+<h2 id="org04199d9"><span class="section-number-2">5.</span> 참고문헌(Reference)</h2>
+<div class="outline-text-2" id="text-5">
+<ul class="org-ul">
+<li><a href="https://reborg.net/post/621211973722472448/clojure-transducers-from-the-ground-up-the">https://reborg.net/post/621211973722472448/clojure-transducers-from-the-ground-up-the</a></li>
+<li><a href="https://github.com/cgrand/xforms">https://github.com/cgrand/xforms</a></li>
+<li><a href="https://www.manning.com/books/clojure-the-essential-reference?a_aid=reborg&amp;a_bid=1f3628a7">https://www.manning.com/books/clojure-the-essential-reference?a_aid=reborg&amp;a_bid=1f3628a7</a></li>
+<li><a href="https://www.gnu.org/software/guile/manual/html_node/SRFI_002d171.html">https://www.gnu.org/software/guile/manual/html_node/SRFI_002d171.html</a></li>
+</ul>
+</div>
+</div>

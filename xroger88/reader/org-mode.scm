@@ -16,7 +16,7 @@
 (define ox-haunt-base-dir "~/Projects/GuixDev/blog")
 (define emacs-cmd-load "~/.emacs.d/elpa/ox-haunt-20230725.1/ox-haunt.el")
 (define emacs-cmd-eval
-  (format #f "(progn (require 'ox-haunt) (setq ox-haunt-base-dir ~s))" ox-haunt-base-dir))
+  (format #f "(progn (require 'org) (require 'ox-haunt) (setq ox-haunt-base-dir ~s))" ox-haunt-base-dir))
 
 (define (org2html-emacs-cmd filepath)
   (format #f "emacs --batch --load ~s --eval ~s ~a --funcall ox-haunt-export-to-html"
@@ -41,6 +41,9 @@
         ;; return the result of read-html-port
         (values meta-info sxml-data)))
     ))
+
+(define (read-org-mode-file filepath)
+  (call-with-input-file filepath read-org-mode-post))
 
 (define org-mode-reader
   (make-reader (make-file-extension-matcher "org")

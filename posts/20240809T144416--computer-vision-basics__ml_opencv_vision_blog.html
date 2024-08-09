@@ -1,0 +1,568 @@
+title: Computer Vision Basics
+date: <2020-10-21 Wed 14:44>
+tags: ml,opencv,vision
+---
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org8d3b75c">1. The Ancient Secrets of Computer Vision Lecture by Jeseph Redmon (Darknet/YOLO author)</a>
+<ul>
+<li><a href="#org397609e">1.1. <span class="done DONE">DONE</span> Introduction</a></li>
+<li><a href="#org530a863">1.2. <span class="done DONE">DONE</span> Human Vision</a></li>
+<li><a href="#orgb0574cd">1.3. <span class="done DONE">DONE</span> Image Basics</a></li>
+<li><a href="#orgde1bbe3">1.4. <span class="done DONE">DONE</span> Resizing, Filtering, and Convolutions</a></li>
+<li><a href="#org7f86db2">1.5. <span class="done DONE">DONE</span> Edges and Features</a></li>
+<li><a href="#orgbef21e1">1.6. <span class="done DONE">DONE</span> Featrues, Matching, and RANSAC</a></li>
+<li><a href="#org5e8f327">1.7. <span class="done BACK">BACK</span> Optical Flow</a></li>
+<li><a href="#org30a276c">1.8. <span class="done BACK">BACK</span> 3D, Depth Perception, and Stero</a></li>
+<li><a href="#org7e59972">1.9. <span class="done BACK">BACK</span> Machine Learning for Computer Vision (2 parts)</a></li>
+<li><a href="#org84fcf92">1.10. <span class="done BACK">BACK</span> Neural Networks</a></li>
+<li><a href="#orgfc72a5d">1.11. <span class="done BACK">BACK</span> Convolutional Neural Networks</a></li>
+<li><a href="#org4558668">1.12. <span class="done BACK">BACK</span> Network Architecture</a></li>
+<li><a href="#org45e67a6">1.13. <span class="done BACK">BACK</span> Object Detection</a></li>
+<li><a href="#org8a6a486">1.14. <span class="done BACK">BACK</span> Detection and Instance Segmentation</a></li>
+<li><a href="#orgac148a5">1.15. <span class="done BACK">BACK</span> Vision and Language</a></li>
+<li><a href="#org8be99b7">1.16. <span class="done BACK">BACK</span> Generative Adaversarial Networks</a></li>
+</ul>
+</li>
+<li><a href="#org1e45f50">2. Datasets for computer vision</a></li>
+<li><a href="#org4ea22f0">3. Sailent Object Detection</a></li>
+<li><a href="#org6dd26ce">4. Apple's Core ML for Mac and iPhone, On-Device AI</a></li>
+<li><a href="#orgaac2a72">5. OpenCV Tutorial by Jason Dsouza (4 Hours course)</a></li>
+<li><a href="#orgd835886">6. OpenCV Python Projects by Murtaza's Workshop - Robotics and AI</a>
+<ul>
+<li><a href="#org1783344">6.1. <span class="done BACK">BACK</span> Face Recognition + Attendance Project</a></li>
+<li><a href="#orgb5791b8">6.2. <span class="done BACK">BACK</span> Traffic Signs Classification Using Convolution Neural Networks</a></li>
+<li><a href="#orga6e8a05">6.3. <span class="done BACK">BACK</span> Real Time Object Measurement</a></li>
+<li><a href="#org31e662b">6.4. <span class="done BACK">BACK</span> Text Detection usign Neural Networks</a></li>
+<li><a href="#org741b2b6">6.5. <span class="done BACK">BACK</span> Document Scanner</a></li>
+<li><a href="#org19340c4">6.6. <span class="done BACK">BACK</span> Sudoku Solver</a></li>
+<li><a href="#org0388632">6.7. <span class="done BACK">BACK</span> Optical Mark Recognition MCQ Automated Grading</a></li>
+<li><a href="#orgc4ea7a6">6.8. <span class="done BACK">BACK</span> How to detect QRCode and BarCode using OpenCV</a></li>
+<li><a href="#orgd14882b">6.9. <span class="done BACK">BACK</span> Robot Hand Gesture Controlled with Arduino &amp; OpenCV</a></li>
+<li><a href="#org9cf2403">6.10. <span class="done BACK">BACK</span> Robot Arm Arduino Tutorial, Gesture Controlled (Part 1)</a></li>
+<li><a href="#org7c23240">6.11. <span class="done BACK">BACK</span> Facial Landmarks and Face Filter using OpenCV</a></li>
+<li><a href="#orgb0723b7">6.12. <span class="done BACK">BACK</span> Feature Detection and Matching + Image Classifier</a></li>
+<li><a href="#org7f99e22">6.13. <span class="done BACK">BACK</span> Panorama Stitching using OpenCV</a></li>
+<li><a href="#org92a3e43">6.14. <span class="done BACK">BACK</span> Object Detection</a></li>
+</ul>
+</li>
+<li><a href="#orgd1482d4">7. Self-Supervised Learning (SSL) for Computer Vision</a>
+<ul>
+<li><a href="#org94ae94d">7.1. SEER: one of the most powerful SSL models for computer vision ever built</a></li>
+<li><a href="#org5f7aa4e">7.2. Hugging Face: a library for computer vision, including such models as Vision Transformer, VisualBERT, and DeIT</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+컴퓨터 비전 관련 초기 스터디 내용입니다. YOLO 관련 내용 및 OPENCV 참조.
+</p>
+
+<div id="outline-container-org8d3b75c" class="outline-2">
+<h2 id="org8d3b75c"><span class="section-number-2">1.</span> The Ancient Secrets of Computer Vision Lecture by Jeseph Redmon (Darknet/YOLO author)</h2>
+<div class="outline-text-2" id="text-1">
+<ul class="org-ul">
+<li>see <a href="https://www.youtube.com/playlist?list=PLjMXczUzEYcHvw5YYSU92WrY8IwhTuq7p">https://www.youtube.com/playlist?list=PLjMXczUzEYcHvw5YYSU92WrY8IwhTuq7p</a></li>
+</ul>
+</div>
+
+<div id="outline-container-org397609e" class="outline-3">
+<h3 id="org397609e"><span class="section-number-3">1.1.</span> <span class="done DONE">DONE</span> Introduction</h3>
+</div>
+<div id="outline-container-org530a863" class="outline-3">
+<h3 id="org530a863"><span class="section-number-3">1.2.</span> <span class="done DONE">DONE</span> Human Vision</h3>
+</div>
+<div id="outline-container-orgb0574cd" class="outline-3">
+<h3 id="orgb0574cd"><span class="section-number-3">1.3.</span> <span class="done DONE">DONE</span> Image Basics</h3>
+</div>
+<div id="outline-container-orgde1bbe3" class="outline-3">
+<h3 id="orgde1bbe3"><span class="section-number-3">1.4.</span> <span class="done DONE">DONE</span> Resizing, Filtering, and Convolutions</h3>
+</div>
+<div id="outline-container-org7f86db2" class="outline-3">
+<h3 id="org7f86db2"><span class="section-number-3">1.5.</span> <span class="done DONE">DONE</span> Edges and Features</h3>
+</div>
+<div id="outline-container-orgbef21e1" class="outline-3">
+<h3 id="orgbef21e1"><span class="section-number-3">1.6.</span> <span class="done DONE">DONE</span> Featrues, Matching, and RANSAC</h3>
+<div class="outline-text-3" id="text-1-6">
+<ul class="org-ul">
+<li>Edge Feature Detector (with one-dirctional high gradient)</li>
+<li>Corner Feature Detector (with high gradient in 2 or more directions)</li>
+<li>Affine Transformation (6 DoF, scale/rotation/shear/translation)</li>
+<li>Homographic (Projective) Transformation
+<ul class="org-ul">
+<li>Reference: <a href="https://medium.com/@daniel.j.lenton/part-ii-projective-transformations-in-2d-2e99ac9c7e9f">https://medium.com/@daniel.j.lenton/part-ii-projective-transformations-in-2d-2e99ac9c7e9f</a>
+a) Shear transformation - scale lamda in one direction, 1/lamda in the other direction, eg. transform square box to paralellogram
+b) Elation transformation - scale a fucntion of x and y, meaning scale toward or away from the orgin
+c) Projecting between planes - these 8 DOF transformations (aka projective transformation) are useufl for "projecting" between difference 2D planes located in 3D space. In a single point of projection like the sun, there are two planes transformable, for example, the side of building and the corresponding shadow on the ground.</li>
+</ul></li>
+<li>SIFT (Scale-Invariant Feature Transform)</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org5e8f327" class="outline-3">
+<h3 id="org5e8f327"><span class="section-number-3">1.7.</span> <span class="done BACK">BACK</span> Optical Flow</h3>
+<div class="outline-text-3" id="text-1-7">
+<ul class="org-ul">
+<li>Movement, related to time. Motion Estimation, Object Tracking, Visual Odometry</li>
+<li>Feature Matching is not enough, not practical for detecting moving parts</li>
+<li>Lucas-Kanade Optical Flow</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org30a276c" class="outline-3">
+<h3 id="org30a276c"><span class="section-number-3">1.8.</span> <span class="done BACK">BACK</span> 3D, Depth Perception, and Stero</h3>
+<div class="outline-text-3" id="text-1-8">
+</div>
+</div>
+<div id="outline-container-org7e59972" class="outline-3">
+<h3 id="org7e59972"><span class="section-number-3">1.9.</span> <span class="done BACK">BACK</span> Machine Learning for Computer Vision (2 parts)</h3>
+<div class="outline-text-3" id="text-1-9">
+<ul class="org-ul">
+<li>Unsupervised learning: K-means clustering</li>
+<li>Supervised learning
+<ul class="org-ul">
+<li>Pick a model, a loss function</li>
+<li>Pick model parameters to minimize loss</li>
+</ul></li>
+<li>Regression predicts real-valued output, use MSE as loss function</li>
+<li>Classification predicts category output, use log likelihood, cross-entropy as loss function</li>
+<li>Bias and Variance !!!
+<ul class="org-ul">
+<li>linear regression model is high bias (assuming data) but low variance (not sensetive to trained data)</li>
+<li>nearest regression model is low bias but high variance</li>
+</ul></li>
+<li>Viola-Jones Face Detection
+<ul class="org-ul">
+<li>Haar features</li>
+<li>Boosting: combination of week classifiers, gradient boosting classifier</li>
+<li>Cascade: series of cheap -&gt; expensive models
+<ul class="org-ul">
+<li>only run slow, good classifiers on hard examples</li>
+</ul></li>
+</ul></li>
+<li>Linear classifier
+<ul class="org-ul">
+<li>f = w*x + b where w is weights, x is input data, b is bias. Guess w from train data.</li>
+<li>Logistic regression, f is logistic function, a probability for output (binary classification)</li>
+</ul></li>
+<li>Stocastic Grediant Decent (GSD)
+<ul class="org-ul">
+<li>with logistic regression, maximum likelihood of logistic function</li>
+</ul></li>
+<li>what if we have multiple classes? softmax !!!
+<ul class="org-ul">
+<li>multinomial logistic regression, a good example is MNIST handwriting classification 0-9</li>
+<li>support vector machine (SVM), well known ML method
+<ul class="org-ul">
+<li>for multiple classifier given data, choose best one in terms of maximum margin</li>
+<li>case study: person detection</li>
+<li>case study: deformable parts models</li>
+</ul></li>
+</ul></li>
+<li>what is feature enginerring?
+<ul class="org-ul">
+<li>arguably the core problem of machine learning</li>
+<li>ML models work well if there is a clear relationship between the inputs and outputs of the function you are trying to model</li>
+</ul></li>
+<li>neural network =&gt; feature extractor + linear model</li>
+<li>activation function makes the network model non-linear, aka universal approximation theorem</li>
+<li>how to learn ???</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org84fcf92" class="outline-3">
+<h3 id="org84fcf92"><span class="section-number-3">1.10.</span> <span class="done BACK">BACK</span> Neural Networks</h3>
+<div class="outline-text-3" id="text-1-10">
+<ul class="org-ul">
+<li>Forward Propagation</li>
+<li>Backward Propagation</li>
+<li>Activation Function</li>
+<li>Matrix Multiplication for input, hidden, output layers</li>
+<li>Underfitting (boosting) and Overfitting (regularization)</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orgfc72a5d" class="outline-3">
+<h3 id="orgfc72a5d"><span class="section-number-3">1.11.</span> <span class="done BACK">BACK</span> Convolutional Neural Networks</h3>
+<div class="outline-text-3" id="text-1-11">
+<ul class="org-ul">
+<li>convolution layer</li>
+<li>im2col: rearrange image before convolution
+<ul class="org-ul">
+<li>handles kernel size, stride, padding</li>
+</ul></li>
+<li>pooling layer (downsampling) &#x2013; image is so big! downsample it without the loss of information
+<ul class="org-ul">
+<li>2x2 max/mean pooling, stride of 2</li>
+</ul></li>
+<li>fully connected layer
+<ul class="org-ul">
+<li>map image features to a single vector</li>
+</ul></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org4558668" class="outline-3">
+<h3 id="org4558668"><span class="section-number-3">1.12.</span> <span class="done BACK">BACK</span> Network Architecture</h3>
+<div class="outline-text-3" id="text-1-12">
+</div>
+</div>
+<div id="outline-container-org45e67a6" class="outline-3">
+<h3 id="org45e67a6"><span class="section-number-3">1.13.</span> <span class="done BACK">BACK</span> Object Detection</h3>
+<div class="outline-text-3" id="text-1-13">
+</div>
+</div>
+<div id="outline-container-org8a6a486" class="outline-3">
+<h3 id="org8a6a486"><span class="section-number-3">1.14.</span> <span class="done BACK">BACK</span> Detection and Instance Segmentation</h3>
+<div class="outline-text-3" id="text-1-14">
+<ul class="org-ul">
+<li>LeNet: First Convnet for Images (Yann LeCun 1998)</li>
+<li>ImageNet: Really big image dataset, 14 million images, 22k categories
+Challenge subset (most used): 1.2M images, 1000 categories</li>
+<li>AlexNet: first good network</li>
+<li>Neural networks work! visualize the result of each layer in network</li>
+<li>VGG: networks getting bigger, from the visual geometry group at oxford
+VGG-16 is still commonly used as a feature extractor</li>
+<li>3x3 convolution on large image is inefficient, instead 1x1 (downsampling channels) and 3x3 convolutions more efficient
+how many filters per layer is optimal, which is open problem.</li>
+<li>GoogleNet: networks getting weird
+split layers, not just one size, but many 1x1, 3x3, 5x5
+also use 1x1 convs to compress feature maps
+-&gt; Inception Module
+different routes taken -&#x2014; split &amp; combine, multiple outputs</li>
+<li>gradient explosion / vanishing problem
+with very deep networks, the gradients flow through many layers of weights on their way back
+with saturating activation functions like logistic or with small wights gradients can "vanish"
+With non-saturating activations or large weights gradients can EXPLODE!
+Learning doesn't scale, what works at 2 levels doesn't at 20</li>
+<li>Batch normalization
+For a mini-batch eg. 64 images, calulate mean, variance over them, then normalize each output by (o-u)/v results in gaussian distribution
+each image's output is being relative to others in the same batch
+They are "good" domain for most of activation functions to stabilize the network</li>
+<li>Residual connections (ResNet)</li>
+<li>Grouped convolutions
+Split up input feature map into groups
+Run convs on groups independently
+Recombine</li>
+<li>Sesmantic Segmentation = Convolution + Deconvolution</li>
+<li>Encoder + Decoder</li>
+<li>U-net / Segnet</li>
+<li>Spatial Pyramid Pooling (SPP)
+max/avg pooling the output of conv into multi-scale downsample versions</li>
+<li>DeepLabv3+
+Atrous convolutions (Dilated convolution)
+the decoder part is pre-trained on ImageNet</li>
+<li>Object Detection
+Scoring object detection &#x2013; IOU
+"Correct" bounding box: IOU &gt; 0.5
+Recall: Correct bounding box / total ground-truth boxes
+Precision: Correct bounding box / total predicted boxes
+Only the most confident predictions: high precision, low recall
+all the predictions: low precision, high recall</li>
+<li>Pascal VOC
+One of the first large detection datasets: 20 classes, 11530 training images, 27450 annotated objects
+also used for semantic segmentation!</li>
+<li>Scoring object detection
+Multiple classes, multiple objects per images, can't just use accuracy
+Precision-Recall curve: vary threshold, plot precision and recall
+Average precision: Area under PR curve, only for a single class
+Take mean of AP accross classes: Mean AP(mAP), Standard detection metric, sometimes at particular IOU i.e. mAP@.5 or mAP@.75</li>
+<li>R-CNN (Regions with CNN)</li>
+<li>Tensor encoding detection (P(Object), X, Y, Width, Height, P(Car|Object), &#x2026;., P(TV|Object))</li>
+<li>Multiple bounding boxes per cell
+Prior Bound Boxes (small, medium, large) &#x2014;&gt; anchor boxes</li>
+<li>Fast RCNN (with ROI pooling), Faster RCNN(with RPN)</li>
+<li>COCO (Common Objects in Context)
+80 objects, 117261 train/val images, 902435 object instances
+New detection metric, mAP averaged over IOU [.5 - .95]
+Segmentation masks for each instance -&#x2014;</li>
+<li>Instance Segmentation (COCO dataset support this kind of instance label)
+-&gt; Mask R-CNN (IDs assigned per frame)</li>
+<li>Mask R-CNN</li>
+<li>Automatic Caption Generation (COCO dataset has captions on images)</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orgac148a5" class="outline-3">
+<h3 id="orgac148a5"><span class="section-number-3">1.15.</span> <span class="done BACK">BACK</span> Vision and Language</h3>
+<div class="outline-text-3" id="text-1-15">
+<ul class="org-ul">
+<li>Language: Time-series input and output</li>
+<li>Recurrent NN</li>
+<li>GRU (Gated Recurrent Unit)</li>
+<li>LSTM (Long Short Term Memory)</li>
+<li>Next word prediction &#x2013; generate story !!!</li>
+<li>Language Translation &#x2013; encoder-decoder pattern</li>
+<li>Image captioning  &#x2013; encode image and decode it to caption
+How do we score it? that's problem &#x2013; BELU, METEOR metric used for automatic scoring</li>
+<li>Visual Question Answering
+Input: Image and a related text-based question
+Output: Answer for the question</li>
+<li>Situation Regcognition
+Images often have on main thing going on, one verb
+Recognize that verb and what sense it's being used in, fill in the other important objects and how they relate in a linguistic frame</li>
+<li>Image Retrieval
+Given a sentence, extract representation using RNN
+Find matching representations from images processed with CNN</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org8be99b7" class="outline-3">
+<h3 id="org8be99b7"><span class="section-number-3">1.16.</span> <span class="done BACK">BACK</span> Generative Adaversarial Networks</h3>
+<div class="outline-text-3" id="text-1-16">
+<ul class="org-ul">
+<li>How to solve any vision problem
+<ol class="org-ol">
+<li>pick a neural network architecture</li>
+<li>design an encoding of the expected outptut (encoding format is VERY important !!! to make the network simple)</li>
+<li>pick a loss function (also VERY important !!!) for that encoding (squared error? Log-likelihood)</li>
+<li>Gather a bunch of training data (and lable it)</li>
+<li>Train your network with backpropagation for a long time</li>
+</ol></li>
+<li>Image colorization
+Gray scale images -&gt; colorized images
+not "right" but looks "good"</li>
+<li>Discriminator network
+Real or generated? loss function</li>
+<li>GAN
+real-image -&gt; gray scale image -&gt; generator network -&gt; colorized images
+real-image + generated image -&gt; discriminator network -&gt; real or generated?
+use discriminator loss to improve generator</li>
+<li>pix2pix: paired image modification</li>
+<li>cycle GAN &#x2014; style transfering ???</li>
+<li>DCGAN (deep convolutional GAN)</li>
+<li>progressive growing of GANs</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-org1e45f50" class="outline-2">
+<h2 id="org1e45f50"><span class="section-number-2">2.</span> Datasets for computer vision</h2>
+<div class="outline-text-2" id="text-2">
+<ul class="org-ul">
+<li><a href="https://towardsdatascience.com/getting-started-with-computer-vision-datasets-a-5-step-primer-5aaf6d63552b">https://towardsdatascience.com/getting-started-with-computer-vision-datasets-a-5-step-primer-5aaf6d63552b</a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org4ea22f0" class="outline-2">
+<h2 id="org4ea22f0"><span class="section-number-2">3.</span> Sailent Object Detection</h2>
+</div>
+
+<div id="outline-container-org6dd26ce" class="outline-2">
+<h2 id="org6dd26ce"><span class="section-number-2">4.</span> Apple's Core ML for Mac and iPhone, On-Device AI</h2>
+<div class="outline-text-2" id="text-4">
+<ul class="org-ul">
+<li>Turi Create by which you can create a model and export it to Core ML
+see <a href="https://github.com/apple/turicreate">https://github.com/apple/turicreate</a></li>
+<li>see Apple's Core ML materials, <a href="https://developer.apple.com/kr/machine-learning/create-ml/">https://developer.apple.com/kr/machine-learning/create-ml/</a></li>
+<li>see <a href="https://machinethink.net/blog/">https://machinethink.net/blog/</a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orgaac2a72" class="outline-2">
+<h2 id="orgaac2a72"><span class="section-number-2">5.</span> OpenCV Tutorial by Jason Dsouza (4 Hours course)</h2>
+<div class="outline-text-2" id="text-5">
+<ul class="org-ul">
+<li><a href="https://www.youtube.com/watch?v=oXlwWbU8l2o">https://www.youtube.com/watch?v=oXlwWbU8l2o</a></li>
+</ul>
+
+<p>
+We'll start all the way from the very basics (reading images and video, image transformations, drawing on images) to the more advanced concepts (color spaces, edge detection, and thresholding). Towards the end, we'll be building a Deep Computer Vision model to detect between the characters in "The Simpsons".
+</p>
+
+<p>
+⭐️ Code ⭐️
+🔗Github link: <a href="https://github.com/jasmcaus/opencv-course">https://github.com/jasmcaus/opencv-course</a>
+🔗Caer: <a href="https://github.com/jasmcaus/caer">https://github.com/jasmcaus/caer</a>
+</p>
+
+<p>
+✏️ Course from Jason Dsouza. Check out his YouTube channel: <a href="https://www.youtube.com/jasmcaus">https://www.youtube.com/jasmcaus</a>
+</p>
+
+<p>
+⭐️ Course Contents ⭐️
+⌨️ (0:00:00) Introduction
+⌨️ (0:01:07) Installing OpenCV and Caer
+Section #1 - Basics
+⌨️ (0:04:12) Reading Images &amp; Video
+⌨️ (0:12:57) Resizing and Rescaling Frames
+⌨️ (0:20:21) Drawing Shapes &amp; Putting Text
+⌨️ (0:31:55) 5 Essential Functions in OpenCV
+⌨️ (0:44:13) Image Transformations
+⌨️ (0:57:06) Contour Detection
+Section #2 - Advanced
+⌨️ (1:12:53) Color Spaces
+⌨️ (1:23:10) Color Channels
+⌨️ (1:31:03) Blurring
+⌨️ (1:44:27) BITWISE operations
+⌨️ (1:53:06) Masking
+⌨️ (2:01:43) Histogram Computation
+⌨️ (2:15:22) Thresholding/Binarizing Images
+⌨️ (2:26:27) Edge Detection
+Section #3 - Faces:
+⌨️ (2:35:25) Face Detection with Haar Cascades
+⌨️ (2:49:05) Face Recognition with OpenCV's built-in recognizer
+Section #4 - Capstone
+⌨️ (3:11:57) Deep Computer Vision
+</p>
+
+<p>
+Check out Jason's Deep Learning Crash Course for Beginners: <a href="https://www.youtube.com/watch?v=VyWAv">https://www.youtube.com/watch?v=VyWAv</a>&#x2026;
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgd835886" class="outline-2">
+<h2 id="orgd835886"><span class="section-number-2">6.</span> OpenCV Python Projects by Murtaza's Workshop - Robotics and AI</h2>
+<div class="outline-text-2" id="text-6">
+<ul class="org-ul">
+<li>see <a href="https://www.youtube.com/playlist?list=PLMoSUbG1Q_r8jFS04rot-3NzidnV54Z2q">https://www.youtube.com/playlist?list=PLMoSUbG1Q_r8jFS04rot-3NzidnV54Z2q</a>
+<ul class="org-ul">
+<li>OpenCV Python Tutorials: <a href="https://www.youtube.com/playlist?list=PLMoSUbG1Q_r_sc0x7ndCsqdIkL7dwrmNF">https://www.youtube.com/playlist?list=PLMoSUbG1Q_r_sc0x7ndCsqdIkL7dwrmNF</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="outline-container-org1783344" class="outline-3">
+<h3 id="org1783344"><span class="section-number-3">6.1.</span> <span class="done BACK">BACK</span> Face Recognition + Attendance Project</h3>
+<div class="outline-text-3" id="text-6-1">
+</div>
+</div>
+<div id="outline-container-orgb5791b8" class="outline-3">
+<h3 id="orgb5791b8"><span class="section-number-3">6.2.</span> <span class="done BACK">BACK</span> Traffic Signs Classification Using Convolution Neural Networks</h3>
+<div class="outline-text-3" id="text-6-2">
+</div>
+</div>
+<div id="outline-container-orga6e8a05" class="outline-3">
+<h3 id="orga6e8a05"><span class="section-number-3">6.3.</span> <span class="done BACK">BACK</span> Real Time Object Measurement</h3>
+<div class="outline-text-3" id="text-6-3">
+</div>
+</div>
+<div id="outline-container-org31e662b" class="outline-3">
+<h3 id="org31e662b"><span class="section-number-3">6.4.</span> <span class="done BACK">BACK</span> Text Detection usign Neural Networks</h3>
+<div class="outline-text-3" id="text-6-4">
+</div>
+</div>
+<div id="outline-container-org741b2b6" class="outline-3">
+<h3 id="org741b2b6"><span class="section-number-3">6.5.</span> <span class="done BACK">BACK</span> Document Scanner</h3>
+<div class="outline-text-3" id="text-6-5">
+</div>
+</div>
+<div id="outline-container-org19340c4" class="outline-3">
+<h3 id="org19340c4"><span class="section-number-3">6.6.</span> <span class="done BACK">BACK</span> Sudoku Solver</h3>
+<div class="outline-text-3" id="text-6-6">
+</div>
+</div>
+<div id="outline-container-org0388632" class="outline-3">
+<h3 id="org0388632"><span class="section-number-3">6.7.</span> <span class="done BACK">BACK</span> Optical Mark Recognition MCQ Automated Grading</h3>
+<div class="outline-text-3" id="text-6-7">
+</div>
+</div>
+<div id="outline-container-orgc4ea7a6" class="outline-3">
+<h3 id="orgc4ea7a6"><span class="section-number-3">6.8.</span> <span class="done BACK">BACK</span> How to detect QRCode and BarCode using OpenCV</h3>
+<div class="outline-text-3" id="text-6-8">
+</div>
+</div>
+<div id="outline-container-orgd14882b" class="outline-3">
+<h3 id="orgd14882b"><span class="section-number-3">6.9.</span> <span class="done BACK">BACK</span> Robot Hand Gesture Controlled with Arduino &amp; OpenCV</h3>
+<div class="outline-text-3" id="text-6-9">
+</div>
+</div>
+<div id="outline-container-org9cf2403" class="outline-3">
+<h3 id="org9cf2403"><span class="section-number-3">6.10.</span> <span class="done BACK">BACK</span> Robot Arm Arduino Tutorial, Gesture Controlled (Part 1)</h3>
+<div class="outline-text-3" id="text-6-10">
+</div>
+</div>
+<div id="outline-container-org7c23240" class="outline-3">
+<h3 id="org7c23240"><span class="section-number-3">6.11.</span> <span class="done BACK">BACK</span> Facial Landmarks and Face Filter using OpenCV</h3>
+<div class="outline-text-3" id="text-6-11">
+</div>
+</div>
+<div id="outline-container-orgb0723b7" class="outline-3">
+<h3 id="orgb0723b7"><span class="section-number-3">6.12.</span> <span class="done BACK">BACK</span> Feature Detection and Matching + Image Classifier</h3>
+<div class="outline-text-3" id="text-6-12">
+</div>
+</div>
+<div id="outline-container-org7f99e22" class="outline-3">
+<h3 id="org7f99e22"><span class="section-number-3">6.13.</span> <span class="done BACK">BACK</span> Panorama Stitching using OpenCV</h3>
+<div class="outline-text-3" id="text-6-13">
+</div>
+</div>
+<div id="outline-container-org92a3e43" class="outline-3">
+<h3 id="org92a3e43"><span class="section-number-3">6.14.</span> <span class="done BACK">BACK</span> Object Detection</h3>
+<div class="outline-text-3" id="text-6-14">
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgd1482d4" class="outline-2">
+<h2 id="orgd1482d4"><span class="section-number-2">7.</span> Self-Supervised Learning (SSL) for Computer Vision</h2>
+<div class="outline-text-2" id="text-7">
+</div>
+<div id="outline-container-org94ae94d" class="outline-3">
+<h3 id="org94ae94d"><span class="section-number-3">7.1.</span> SEER: one of the most powerful SSL models for computer vision ever built</h3>
+<div class="outline-text-3" id="text-7-1">
+<p>
+paper - <a href="https://arxiv.org/pdf/2103.01988.pdf">https://arxiv.org/pdf/2103.01988.pdf</a>
+</p>
+<ul class="org-ul">
+<li>일반화된 지능을 갖기 위해서는 제한된 데이터로 학습하는 것에 한계가 있으며, 많은 이미지 데이터를 정제하여 레이블링을 추가하는 작업에 많은 어려움이 있음.
+다양한 이미지 특징을 사전학습(pre-training)을 시키고, 타겟 도메인에 적용하기 위해 타겟 도메인에 연관된 학습 데이터를 활용하여 모델을 파인튜닝하여 Tranfer Learning을 하는 일련의 과정이 요구됨. SSL 기반으로 사전학습을 어떻게 잘 시킬 수 있을까에 대한 고민임.
+SSL의 경우, 하나의 이미지의 두개의 다른 뷰를 동일 네트워크 입력시켜서 피처 벡터의 차이를 줄이거나 클러스터링 알고리즘을 적용하여 다른 이미지와 상대적으로 멀리, 같은 이미지는 가깝게 배치하는 등의 학습 방법을 사용한다. Joint Embedding, Contrastive Learning, Non-Contrastive Learning 등이 있다.</li>
+<li>레이블이 없는 랜덤 이미지를 온라인으로 pretraining 시키는 것을 제안, 인스타그램 이미지 활용함.
+기존 방식은 인터넷의 Hashtag를 갖는 이미지만 모아서 해쉬태그를 이용하여 클러스터링하거나, curated 된 ImageNet과 같은 데이터를 기준으로 사전학습을 시킴.</li>
+<li>규모가 큰 Conv Net 구조인 RegNet 기반으로 large-scale로 학습을 시킴. 모델 파라미터를 늘릴 수 있는 네트워크가 성능에 영향을 주기에, 효율과 성능 고려.</li>
+</ul>
+</div>
+<div id="outline-container-org22b6c86" class="outline-4">
+<h4 id="org22b6c86"><span class="section-number-4">7.1.1.</span> 활용에 대한 생각</h4>
+<div class="outline-text-4" id="text-7-1-1">
+<p>
+FAIR에서 공개한 VISSL(<a href="https://vissl.ai/">https://vissl.ai/</a>) 모델 및 사전학습 결과를 활용하여 다운스트림 태스크에 효과적으로 적용할 수 있는 방안, 즉 사전학습된 네트워크를 활용하여 전이학습이 가능하도록 하면 타켓 도메인에서의 태스크의 성능을 높이는 데 도움이 될 수 있다. 사전학습을 기반으로 전이학습이 가눙하도록 AutoCare ML Framework에서 이를 고려해 보면 좋을 거 같다.
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org5f7aa4e" class="outline-3">
+<h3 id="org5f7aa4e"><span class="section-number-3">7.2.</span> Hugging Face: a library for computer vision, including such models as Vision Transformer, VisualBERT, and DeIT</h3>
+<div class="outline-text-3" id="text-7-2">
+<ul class="org-ul">
+<li>주어진 문장에서 빠진 단어를 채우는 문제, 즉 전체 컨택스트에 비추어 통계적 상관성을 고려하여 다음 단어를 예측하는 NLP 문제와 대비하여, 비전 문제는 비디오 시퀀스에서 다음 프레임을 예측한다 거나 하나의 프레임에서 일부 픽셀을 예측하는 것으로 복잡도나 상관관계의 폭이 추적 불가능할 정도로 높다.</li>
+<li>NLP 문제에 적용된 솔루션인 트랜스포머 모델을 기반으로 비전 문제를 해결하려는 시도는 앞으로 계속 시도될 것임.</li>
+<li>다양한 state-of-the-art 트랜스포머 모델(PyTorch, TensorFlow 2.0)의 구현을 제공하며, 구조적으로 사전학습된 모델 클래스, 모델을 빌드하기 위한 설정정보를 가진 Configuration 클래스, 각 모델의 어휘를 저장하고 토큰 임베딩을 위한 스트링 앤코딩/디코딩 방식을 제공하는 트랜스포머 라이브러리임.</li>
+<li>현재 버전은 컴퓨터 비전에 적용 가능한 여러가지 모델을 포함하고 있다. ViT (Google), VisualBERT (UCLA), DeIT (FAIR) 등.</li>
+<li>NLP Transformer와 같은 프로그래밍 모델을 제공하므로, 쉽게 접근하여 새로운 approach를 테스트해 볼 수 있다.
+ViT를 활용하여 이미지를 분류하는 개념 설명 참조.</li>
+</ul>
+
+<div id="org375d4de" class="figure">
+<p><img src="https://cdn.substack.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fbucketeer-e05bbc84-baa3-437e-9518-adb32be77984.s3.amazonaws.com%2Fpublic%2Fimages%2F076126e7-a169-46af-9cf3-ad2134813913_1600x1100.gif" alt="https%3A%2F%2Fbucketeer-e05bbc84-baa3-437e-9518-adb32be77984.s3.amazonaws.com%2Fpublic%2Fimages%2F076126e7-a169-46af-9cf3-ad2134813913_1600x1100.gif" width="800" />
+</p>
+</div>
+</div>
+<div id="outline-container-orgb961dc0" class="outline-4">
+<h4 id="orgb961dc0"><span class="section-number-4">7.2.1.</span> 활용애 대한 생각</h4>
+<div class="outline-text-4" id="text-7-2-1">
+<p>
+잘 구성된 정리된 라이브러리를 활용하여 Transformer 기반 비전 인식에 대한 Follow-up이 필요함.
+추후 AutoCare ML Framework 확장요소로 고려될 필요가 있음.
+</p>
+</div>
+</div>
+</div>
+</div>
