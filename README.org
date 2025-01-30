@@ -1,0 +1,44 @@
+
+* start dev by using guix shell
+  #+begin_src sh
+guix shell -m manifest.scm -- emacs -nw
+  #+end_src
+
+* build & serve by haunt command
+
+  #+begin_src sh
+    # to build
+    haunt build
+    # served with port 8080, start browser http://localhost:8080
+    DISPLAY=10.0.2.2:0 chromium &
+    # to serve and watch (-w option)
+    haunt serve -w
+  #+end_src
+
+* ssh local tunneling for host to access the running server in virtual machine
+
+For example, to access the web page served at port 8080 in virtual machine from host machine, the local ssh tunnel between host:18080 and vm:8080 is made so you can go to http://localhost:18080 for accessing the local web server of virtual machine.
+
+#+begin_src sh
+
+  ssh -o StrictHostKeyChecking=no -N -L 18080:localhost:8080 -i $HOME/.guix/ssh-cert/msg_rsa admin@127.0.0.1 -p 19001
+
+#+end_src
+
+
+
+* code dev with emacs-geiser (guile dev)
+
+In emacs, M-x compile then 'haunt build' and recompile with 'g'
+
+* Org-mode file conversion to HTML/PDF
+
+#+begin_src sh
+  emacs --batch --eval "(require 'org)" notes.org --funcall org-html-export-to-html
+  emacs --batch --eval "(require 'org)" fulcro.org --funcall org-latex-export-to-pdf
+  emacs --batch --load ~/.emacs --eval "(require 'org)" notes.org --funcall org-html-export-to-html
+  # for Haunt html format, assume that /tmp/posts directory exists
+  emacs --batch --load "~/.emacs.d/elpa/ox-haunt-20230725.1/ox-haunt.el" --eval "(progn (require 'ox-haunt) (setq ox-haunt-base-dir \"/tmp\"))" fulcro.org --funcall ox-haunt-export-to-html
+#+end_src
+
+In Emacs, you have an org file then ...
