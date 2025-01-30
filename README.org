@@ -41,4 +41,21 @@ In emacs, M-x compile then 'haunt build' and recompile with 'g'
   emacs --batch --load "~/.emacs.d/elpa/ox-haunt-20230725.1/ox-haunt.el" --eval "(progn (require 'ox-haunt) (setq ox-haunt-base-dir \"/tmp\"))" fulcro.org --funcall ox-haunt-export-to-html
 #+end_src
 
-In Emacs, you have an org file then ...
+In Emacs, you have an org file then check first haunt variables with 'C-h v' if they are correctly assigned with proper values, for example, =ox-haunt-base-dir= = ~/projects/GuixDev/blog, etc.
+
+To convert to html, dispatch org-export with 'C-c C-e', select [s] for haunt, and [h] for file.
+Make sure that the org file has the properties #+title:, #+date:, #+tags: as the followings:
+
+#+title:     XTDB ...
+#+date:       [2024-06-11 Tue 09:32]
+#+filetags:   :clojure:db:dev:
+#+identifier: 20240611T093253
+#+tags: db,clojure
+
+
+* ssh-agent and ssh-add for git push
+
+#+begin_src sh
+    eval $(ssh-agent)
+    ssh-add ~/.ssh/id_xxx
+#+end_src

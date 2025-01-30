@@ -1,0 +1,51 @@
+title: XTDB v2
+date: [2024-06-11 Tue 09:32]
+tags: db,clojure
+---
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org850b78b">1. Installation &amp; Setup</a></li>
+<li><a href="#org1a4f121">2. Tutorial</a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org850b78b" class="outline-2">
+<h2 id="org850b78b"><span class="section-number-2">1.</span> Installation &amp; Setup</h2>
+<div class="outline-text-2" id="text-1">
+<ul class="org-ul">
+<li><p>
+Install Docker XTDB
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">docker run --pull=always -tip 6543:3000 -v /tmp/xtdb-data-dir:/var/lib/xtdb ghcr.io/xtdb/xtdb-standalone-ea
+curl http://localhost:6543/status
+</pre>
+</div></li>
+
+<li><p>
+run xtsql interactive console
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><span style="color: #585858;"># </span><span style="color: #585858;">any recent version of Python should work, no Python knowledge required</span>
+curl -s https://docs.xtdb.com/xtsql.py -O &amp;&amp; <span style="color: #afff00;">\</span>
+  python xtsql.py --url=http://localhost:6543
+</pre>
+</div></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org1a4f121" class="outline-2">
+<h2 id="org1a4f121"><span class="section-number-2">2.</span> Tutorial</h2>
+<div class="outline-text-2" id="text-2">
+<ul class="org-ul">
+<li><a href="https://docs.xtdb.com/tutorials/introducing-xtql.html">https://docs.xtdb.com/tutorials/introducing-xtql.html</a></li>
+<li><a href="https://docs.xtdb.com/tutorials/financial-usecase/time-in-finance.html">https://docs.xtdb.com/tutorials/financial-usecase/time-in-finance.html</a></li>
+</ul>
+</div>
+</div>
